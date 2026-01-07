@@ -37,10 +37,6 @@ if not login_form(st.session_state.sh_u):
 # --- USER EMAIL HOLEN ---
 user_email = st.session_state.user_email
 
-# --- EINKAUFSLISTE STATE INIT (WICHTIG!) ---
-if "shop_checked" not in st.session_state:
-    st.session_state.shop_checked = set()
-
 # --- DATEN FÜR USER LADEN ---
 if "df_z" not in st.session_state or st.session_state.df_z is None:
     st.session_state.df_z, st.session_state.df_s, st.session_state.df_m, \
@@ -67,8 +63,8 @@ TRANSLATIONS = {
         "nav_dash": "⌂ Dashboard", "nav_coll": "◫ Collections", "nav_shop": "≡ Shopping List", 
         "nav_cook": "♨ Cook", "nav_import": "⬇ Import", "nav_edit": "⚙ Editor", "nav_profile": "👤 Profile",
         "search_ph": "Search...", "welcome": "Welcome back", "favs": "Your Favorites", "all_rec": "Recipe Book",
-        "no_rec": "No recipes found.", "random": "Inspiration", "random_btn": "Surprise Me",
-        "to_rec": "Open Recipe", "ingredients": "Ingredients", "steps": "Instructions",
+        "no_rec": "No recipes found.", "random": "Inspiration", "random_btn": "Surprise",
+        "to_rec": "Open", "ingredients": "Ingredients", "steps": "Instructions",
         "save": "Save", "delete": "Delete", "calc_macros": "AI Calc Macros",
         "portions": "Servings", "import_btn": "Analyze & Save",
         "url_ph": "Link to YouTube / Instagram / TikTok", "folder_new": "New Collection",
@@ -76,10 +72,10 @@ TRANSLATIONS = {
         "save_coll_title": "Save to Collection", "save_coll_btn": "Add",
         "translating": "Translating recipe...", "logout": "Logout", "success": "Success!",
         "dash_intro": "Your digital kitchen assistant. Here is what you can do:",
-        "feat_1_t": "AI Import", "feat_1_d": "Paste any video link (Insta/TikTok/YouTube). The AI extracts ingredients, steps, and nutrition automatically.",
-        "feat_2_t": "Nutrition", "feat_2_d": "Every recipe gets detailed macro-nutrients (Calories, Protein, Carbs, Fat) calculated per serving.",
-        "feat_3_t": "Shopping", "feat_3_d": "Adjust servings and add ingredients directly to your interactive shopping list.",
-        "feat_4_t": "Organize", "feat_4_d": "Create custom collections and mark your favorites to find them quickly.",
+        "feat_1_t": "AI Import", "feat_1_d": "Paste any video link (Insta/TikTok/YouTube).",
+        "feat_2_t": "Nutrition", "feat_2_d": "Every recipe gets detailed macro-nutrients.",
+        "feat_3_t": "Shopping", "feat_3_d": "Adjust servings and add ingredients to list.",
+        "feat_4_t": "Organize", "feat_4_d": "Create custom collections and mark favorites.",
         "prof_set": "Settings", "prof_lang": "Language", "prof_pw": "Change Password",
         "pw_old": "Old Password", "pw_new": "New Password", "pw_upd": "Update Password", "pw_success": "Password updated!"
     },
@@ -87,8 +83,8 @@ TRANSLATIONS = {
         "nav_dash": "⌂ Dashboard", "nav_coll": "◫ Sammlungen", "nav_shop": "≡ Einkaufsliste", 
         "nav_cook": "♨ Kochen", "nav_import": "⬇ Import", "nav_edit": "⚙ Editor", "nav_profile": "👤 Profil",
         "search_ph": "Suche...", "welcome": "Willkommen zurück", "favs": "Deine Favoriten", "all_rec": "Rezeptbuch",
-        "no_rec": "Keine Rezepte gefunden.", "random": "Inspiration", "random_btn": "Überrasch mich",
-        "to_rec": "Zum Rezept", "ingredients": "Zutaten", "steps": "Zubereitung",
+        "no_rec": "Keine Rezepte gefunden.", "random": "Inspiration", "random_btn": "Überraschung",
+        "to_rec": "Öffnen", "ingredients": "Zutaten", "steps": "Zubereitung",
         "save": "Speichern", "delete": "Löschen", "calc_macros": "KI Makros berechnen",
         "portions": "Portionen", "import_btn": "Analysieren & Speichern",
         "url_ph": "Link zu YouTube / Instagram / TikTok", "folder_new": "Neue Sammlung",
@@ -96,10 +92,10 @@ TRANSLATIONS = {
         "save_coll_title": "In Sammlung speichern", "save_coll_btn": "Hinzufügen",
         "translating": "Übersetze Rezept...", "logout": "Abmelden", "success": "Erfolgreich!",
         "dash_intro": "Dein digitaler Küchen-Assistent. Das kannst du machen:",
-        "feat_1_t": "KI Import", "feat_1_d": "Kopiere einen Link (Insta/TikTok/YouTube). Die KI extrahiert Zutaten, Schritte & Nährwerte automatisch.",
-        "feat_2_t": "Nährwerte", "feat_2_d": "Jedes Rezept erhält automatisch berechnete Makros (Kcal, Protein, Carbs, Fett) pro Portion.",
-        "feat_3_t": "Einkauf", "feat_3_d": "Passe die Portionen an und setze Zutaten direkt auf deine interaktive Einkaufsliste.",
-        "feat_4_t": "Ordnung", "feat_4_d": "Erstelle eigene Sammlungen und markiere Favoriten für schnellen Zugriff.",
+        "feat_1_t": "KI Import", "feat_1_d": "Kopiere einen Link (Insta/TikTok/YouTube).",
+        "feat_2_t": "Nährwerte", "feat_2_d": "Jedes Rezept erhält automatisch berechnete Makros.",
+        "feat_3_t": "Einkauf", "feat_3_d": "Passe die Portionen an und setze Zutaten auf die Liste.",
+        "feat_4_t": "Ordnung", "feat_4_d": "Erstelle eigene Sammlungen und markiere Favoriten.",
         "prof_set": "Einstellungen", "prof_lang": "Sprache", "prof_pw": "Passwort ändern",
         "pw_old": "Altes Passwort", "pw_new": "Neues Passwort", "pw_upd": "Passwort aktualisieren", "pw_success": "Passwort geändert!"
     },
@@ -107,8 +103,8 @@ TRANSLATIONS = {
         "nav_dash": "⌂ Tablero", "nav_coll": "◫ Colecciones", "nav_shop": "≡ Lista de Compras", 
         "nav_cook": "♨ Cocinar", "nav_import": "⬇ Importar", "nav_edit": "⚙ Editor", "nav_profile": "👤 Perfil",
         "search_ph": "Buscar...", "welcome": "Bienvenido", "favs": "Favoritos", "all_rec": "Recetario",
-        "no_rec": "No se encontraron recetas.", "random": "Inspiración", "random_btn": "Sorpréndeme",
-        "to_rec": "Ver Receta", "ingredients": "Ingredientes", "steps": "Instrucciones",
+        "no_rec": "No se encontraron recetas.", "random": "Inspiración", "random_btn": "Sorpresa",
+        "to_rec": "Ver", "ingredients": "Ingredientes", "steps": "Instrucciones",
         "save": "Guardar", "delete": "Borrar", "calc_macros": "Calc Macros IA",
         "portions": "Porciones", "import_btn": "Analizar y Guardar",
         "url_ph": "Enlace a YouTube / Instagram / TikTok", "folder_new": "Nueva Colección",
@@ -116,9 +112,9 @@ TRANSLATIONS = {
         "save_coll_title": "Guardar en colección", "save_coll_btn": "Añadir",
         "translating": "Traduciendo...", "logout": "Cerrar Sesión", "success": "¡Éxito!",
         "dash_intro": "Tu asistente de cocina digital. Esto es lo que puedes hacer:",
-        "feat_1_t": "Importar IA", "feat_1_d": "Pega un enlace. La IA extrae ingredientes, pasos y nutrición automáticamente.",
-        "feat_2_t": "Nutrición", "feat_2_d": "Cálculo automático de macros (Calorías, Proteínas, Grasas) por porción.",
-        "feat_3_t": "Compras", "feat_3_d": "Ajusta las porciones y añade ingredientes a tu lista de compras.",
+        "feat_1_t": "Importar IA", "feat_1_d": "Pega un enlace. La IA extrae ingredientes automáticamente.",
+        "feat_2_t": "Nutrición", "feat_2_d": "Cálculo automático de macros por porción.",
+        "feat_3_t": "Compras", "feat_3_d": "Ajusta las porciones y añade ingredientes a tu lista.",
         "feat_4_t": "Organizar", "feat_4_d": "Crea colecciones personalizadas y marca tus favoritos.",
         "prof_set": "Ajustes", "prof_lang": "Idioma", "prof_pw": "Cambiar Contraseña",
         "pw_old": "Contraseña anterior", "pw_new": "Nueva contraseña", "pw_upd": "Actualizar", "pw_success": "¡Actualizado!"
@@ -134,7 +130,7 @@ MENU_MAP = {
     "cook": "nav_cook", "import": "nav_import", "edit": "nav_edit", "profile": "nav_profile"
 }
 
-# Alias
+# --- ALIAS ---
 df_z = st.session_state.df_z
 df_s = st.session_state.df_s
 df_m = st.session_state.df_m
@@ -189,9 +185,9 @@ def render_card(r_name, context="all"):
 
     with st.container(border=True):
         st.markdown(f"""<div class="recipe-card-img" style="background-image: url('{img}');"></div>""", unsafe_allow_html=True)
-        st.markdown(f"""<div style="padding: 10px 10px 0 10px;">
-            <span class="recipe-cat">{cat if cat else "Rezept"}</span>
-            <div style="height: 30px; overflow: hidden; margin-bottom: 5px;">
+        st.markdown(f"""<div style="padding: 8px 5px 0 5px;">
+            <span class="recipe-cat">{cat if cat else "Recipe"}</span>
+            <div style="height: 25px; overflow: hidden; margin-bottom: 5px;">
                 <span class="recipe-title" title="{r_name}">{r_name}</span>
             </div></div>""", unsafe_allow_html=True)
         c_btn, c_star = st.columns([4, 1])
@@ -329,6 +325,9 @@ elif active_nav == "shopping":
     if not df_e.empty:
         local_df = df_e.copy()
         local_df['id'] = local_df['Zutat'] + "_" + local_df['Einheit']
+        # FIX: Check if shop_checked exists
+        if "shop_checked" not in st.session_state: st.session_state.shop_checked = set()
+        
         local_df['done'] = local_df['id'].apply(lambda x: x in st.session_state.shop_checked)
         local_df = local_df.sort_values(by=['done', 'Zutat'])
         
