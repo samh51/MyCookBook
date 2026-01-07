@@ -1,0 +1,10 @@
+streamlit
+pandas
+gspread
+oauth2client
+bcrypt
+google-generativeai
+youtube-transcript-api
+yt-dlp
+Pillow
+requests
