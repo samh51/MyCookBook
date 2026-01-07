@@ -6,17 +6,11 @@ import os
 
 # --- COOKIE WORKAROUND ---
 if "cookies" in st.secrets:
-    with open("cookies.txt", "w") as f:
-        f.write(st.secrets["cookies"])
+    with open("cookies.txt", "w") as f: f.write(st.secrets["cookies"])
 
 # Module
-from modules.database import (
-    get_data, save_recipe_to_db, delete_recipe_from_db, toggle_favorit, 
-    add_to_folder_db, add_to_shopping_list, sync_shopping_list_to_db
-)
-from modules.api import (
-    rezept_analysieren, makros_neu_berechnen, translate_recipe_text, get_web_content, CATEGORIES
-)
+from modules.database import (get_data, save_recipe_to_db, delete_recipe_from_db, toggle_favorit, add_to_folder_db, add_to_shopping_list, sync_shopping_list_to_db)
+from modules.api import (rezept_analysieren, makros_neu_berechnen, translate_recipe_text, get_web_content, CATEGORIES)
 from modules.utils import PLACEHOLDER_IMG
 from modules.styles import apply_custom_css
 from modules.auth import login_form, change_user_password, update_user_language
@@ -47,86 +41,73 @@ if "shop_checked" not in st.session_state: st.session_state.shop_checked = set()
 
 # --- HELPER ---
 def refresh_data():
-    keys = ['df_z', 'df_s', 'df_m', 'df_e', 'df_o']
-    for k in keys:
+    for k in ['df_z', 'df_s', 'df_m', 'df_e', 'df_o']: 
         if k in st.session_state: del st.session_state[k]
     st.rerun()
 
-# --- SPRACHEN ---
+# --- SPRACHEN & ICONS ---
 LANGUAGES = {"English": "EN", "Deutsch": "DE", "Español": "ES", "Français": "FR", "Italiano": "IT", "Polski": "PL"}
 CODE_TO_NAME = {v: k for k, v in LANGUAGES.items()}
 
+# Hier die Icons direkt in den Namen, damit sie im Menü erscheinen
 TRANSLATIONS = {
     "EN": {
-        "nav_dash": "Dashboard", "nav_coll": "Collections", "nav_shop": "Shopping List", 
-        "nav_cook": "Cook", "nav_import": "Import", "nav_edit": "Editor", "nav_profile": "Profile",
-        "search_ph": "Search recipes...", "welcome": "Hey", "favs": "Favorites", "all_rec": "Cookbook",
-        "no_rec": "Nothing found here.", "random": "Inspiration", "random_btn": "Surprise Me",
+        "menu_opts": ["⌂ Dashboard", "◫ Collections", "≡ Shopping", "♨ Cook", "⬇ Import", "⚙ Editor", "👤 Profile"],
+        "search_ph": "Search...", "welcome": "Welcome", "favs": "Favorites", "all_rec": "Cookbook",
+        "no_rec": "Nothing found.", "random": "Inspiration", "random_btn": "Surprise",
         "to_rec": "Open", "ingredients": "Ingredients", "steps": "Steps",
-        "save": "Save", "delete": "Delete", "calc_macros": "Calc Macros",
-        "portions": "Servings", "import_btn": "Analyze",
-        "url_ph": "Paste Link (Instagram/YouTube)", "folder_new": "New Collection",
-        "add_shop": "Add to List", "clean_shop": "Clean Up", "clear_shop": "Clear All",
-        "save_coll_title": "Save to Collection", "save_coll_btn": "Add",
-        "translating": "Translating...", "logout": "Log Out", "success": "Done!",
-        "dash_intro": "Your smart kitchen companion.",
-        "feat_1_t": "Import", "feat_1_d": "Save from Insta/TikTok.",
-        "feat_2_t": "Macros", "feat_2_d": "Auto nutrition calc.",
-        "feat_3_t": "Shop", "feat_3_d": "Smart shopping list.",
-        "feat_4_t": "Sort", "feat_4_d": "Collections & Favs.",
+        "save": "Save", "delete": "Delete", "calc_macros": "Calc Macros", "portions": "Servings", "import_btn": "Analyze",
+        "url_ph": "Paste Link", "folder_new": "New Collection", "add_shop": "To List", "clean_shop": "Clean", "clear_shop": "Clear",
+        "save_coll_title": "Save to Collection", "save_coll_btn": "Add", "translating": "Translating...", "logout": "Logout", "success": "Done!",
+        "dash_intro": "Your smart kitchen assistant.",
+        "feat_1_t": "Import", "feat_1_d": "From Insta/TikTok.",
+        "feat_2_t": "Macros", "feat_2_d": "Auto nutrition.",
+        "feat_3_t": "Shop", "feat_3_d": "Smart list.",
+        "feat_4_t": "Sort", "feat_4_d": "Organize.",
         "prof_set": "Settings", "prof_lang": "Language", "prof_pw": "Change Password",
-        "pw_old": "Old", "pw_new": "New Password", "pw_upd": "Update", "pw_success": "Updated!"
+        "pw_old": "Old", "pw_new": "New", "pw_upd": "Update", "pw_success": "Updated!"
     },
     "DE": {
-        "nav_dash": "Dashboard", "nav_coll": "Sammlungen", "nav_shop": "Einkaufsliste", 
-        "nav_cook": "Kochen", "nav_import": "Importieren", "nav_edit": "Editor", "nav_profile": "Profil",
+        "menu_opts": ["⌂ Dashboard", "◫ Sammlungen", "≡ Einkauf", "♨ Kochen", "⬇ Import", "⚙ Editor", "👤 Profil"],
         "search_ph": "Suchen...", "welcome": "Hallo", "favs": "Favoriten", "all_rec": "Rezeptbuch",
         "no_rec": "Nichts gefunden.", "random": "Inspiration", "random_btn": "Überraschung",
         "to_rec": "Öffnen", "ingredients": "Zutaten", "steps": "Schritte",
-        "save": "Speichern", "delete": "Löschen", "calc_macros": "Makros berechnen",
-        "portions": "Portionen", "import_btn": "Analysieren",
-        "url_ph": "Link einfügen (Insta/YouTube)", "folder_new": "Neue Sammlung",
-        "add_shop": "Auf die Liste", "clean_shop": "Aufräumen", "clear_shop": "Alles löschen",
-        "save_coll_title": "In Sammlung", "save_coll_btn": "Hinzufügen",
-        "translating": "Übersetze...", "logout": "Abmelden", "success": "Erledigt!",
-        "dash_intro": "Dein smarter Küchen-Assistent.",
-        "feat_1_t": "Import", "feat_1_d": "Von Insta/TikTok speichern.",
-        "feat_2_t": "Makros", "feat_2_d": "Automatische Nährwerte.",
-        "feat_3_t": "Einkauf", "feat_3_d": "Smarte Einkaufsliste.",
-        "feat_4_t": "Ordnung", "feat_4_d": "Sammlungen & Favoriten.",
+        "save": "Speichern", "delete": "Löschen", "calc_macros": "Makros", "portions": "Portionen", "import_btn": "Analysieren",
+        "url_ph": "Link einfügen", "folder_new": "Neue Sammlung", "add_shop": "Auf Liste", "clean_shop": "Aufräumen", "clear_shop": "Leeren",
+        "save_coll_title": "In Sammlung", "save_coll_btn": "Hinzufügen", "translating": "Übersetze...", "logout": "Abmelden", "success": "Erledigt!",
+        "dash_intro": "Dein smarter Assistent.",
+        "feat_1_t": "Import", "feat_1_d": "Von Insta/TikTok.",
+        "feat_2_t": "Makros", "feat_2_d": "Auto Nährwerte.",
+        "feat_3_t": "Einkauf", "feat_3_d": "Smarte Liste.",
+        "feat_4_t": "Ordnung", "feat_4_d": "Sortieren.",
         "prof_set": "Einstellungen", "prof_lang": "Sprache", "prof_pw": "Passwort",
-        "pw_old": "Alt", "pw_new": "Neues Passwort", "pw_upd": "Ändern", "pw_success": "Geändert!"
+        "pw_old": "Alt", "pw_new": "Neu", "pw_upd": "Ändern", "pw_success": "Geändert!"
     },
     "ES": {
-        "nav_dash": "⌂ Tablero", "nav_coll": "◫ Colecciones", "nav_shop": "≡ Lista de Compras", 
-        "nav_cook": "♨ Cocinar", "nav_import": "⬇ Importar", "nav_edit": "⚙ Editor", "nav_profile": "👤 Perfil",
-        "search_ph": "Buscar...", "welcome": "Bienvenido", "favs": "Favoritos", "all_rec": "Recetario",
-        "no_rec": "No se encontraron recetas.", "random": "Inspiración", "random_btn": "Sorpresa",
-        "to_rec": "Ver", "ingredients": "Ingredientes", "steps": "Instrucciones",
-        "save": "Guardar", "delete": "Borrar", "calc_macros": "Calc Macros IA",
-        "portions": "Porciones", "import_btn": "Analizar y Guardar",
-        "url_ph": "Enlace a YouTube / Instagram / TikTok", "folder_new": "Nueva Colección",
-        "add_shop": "Añadir a lista", "clean_shop": "Limpiar lista", "clear_shop": "Borrar todo",
-        "save_coll_title": "Guardar en colección", "save_coll_btn": "Añadir",
-        "translating": "Traduciendo...", "logout": "Cerrar Sesión", "success": "¡Éxito!",
-        "dash_intro": "Tu asistente de cocina digital. Esto es lo que puedes hacer:",
-        "feat_1_t": "Importar IA", "feat_1_d": "Pega un enlace. La IA extrae ingredientes automáticamente.",
-        "feat_2_t": "Nutrición", "feat_2_d": "Cálculo automático de macros por porción.",
-        "feat_3_t": "Compras", "feat_3_d": "Ajusta las porciones y añade ingredientes a tu lista.",
-        "feat_4_t": "Organizar", "feat_4_d": "Crea colecciones personalizadas y marca tus favoritos.",
-        "prof_set": "Ajustes", "prof_lang": "Idioma", "prof_pw": "Cambiar Contraseña",
-        "pw_old": "Contraseña anterior", "pw_new": "Nueva contraseña", "pw_upd": "Actualizar", "pw_success": "¡Actualizado!"
+        "menu_opts": ["⌂ Tablero", "◫ Colecciones", "≡ Compras", "♨ Cocinar", "⬇ Importar", "⚙ Editor", "👤 Perfil"],
+        "search_ph": "Buscar...", "welcome": "Hola", "favs": "Favoritos", "all_rec": "Recetario",
+        "no_rec": "Nada encontrado.", "random": "Inspiración", "random_btn": "Sorpresa",
+        "to_rec": "Ver", "ingredients": "Ingredientes", "steps": "Pasos",
+        "save": "Guardar", "delete": "Borrar", "calc_macros": "Macros", "portions": "Porciones", "import_btn": "Analizar",
+        "url_ph": "Pegar enlace", "folder_new": "Nueva Colección", "add_shop": "A la lista", "clean_shop": "Limpiar", "clear_shop": "Borrar todo",
+        "save_coll_title": "Colección", "save_coll_btn": "Añadir", "translating": "Traduciendo...", "logout": "Salir", "success": "¡Hecho!",
+        "dash_intro": "Tu asistente inteligente.",
+        "feat_1_t": "Importar", "feat_1_d": "De Insta/TikTok.",
+        "feat_2_t": "Nutrición", "feat_2_d": "Macros auto.",
+        "feat_3_t": "Compras", "feat_3_d": "Lista inteligente.",
+        "feat_4_t": "Orden", "feat_4_d": "Organizar.",
+        "prof_set": "Ajustes", "prof_lang": "Idioma", "prof_pw": "Contraseña",
+        "pw_old": "Vieja", "pw_new": "Nueva", "pw_upd": "Actualizar", "pw_success": "¡Listo!"
     }
 }
+# Fallback
 for l in ["FR", "IT", "PL"]: TRANSLATIONS[l] = TRANSLATIONS["EN"]
 
 if "lang_code" not in st.session_state: st.session_state.lang_code = "EN"
 def T(key): return TRANSLATIONS[st.session_state.lang_code].get(key, TRANSLATIONS["EN"].get(key, key))
 
-MENU_MAP = {
-    "dashboard": "nav_dash", "collections": "nav_coll", "shopping": "nav_shop",
-    "cook": "nav_cook", "import": "nav_import", "edit": "nav_edit", "profile": "nav_profile"
-}
+# Interne Keys für die Logik (Reihenfolge muss matchen mit menu_opts!)
+INTERNAL_KEYS = ["dashboard", "collections", "shopping", "cook", "import", "edit", "profile"]
 
 # Alias
 df_z = st.session_state.df_z; df_m = st.session_state.df_m
@@ -145,23 +126,30 @@ def fav_callback(r_name, is_currently_fav):
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("### My Cookbook")
+    st.markdown("### 👨‍🍳 MyCookbook")
     search_query = st.text_input("Search", placeholder=T("search_ph"), label_visibility="collapsed").lower().strip()
     st.write("") 
     
     if "internal_nav" not in st.session_state: st.session_state.internal_nav = "dashboard"
-    options_display = [T(v) for k, v in MENU_MAP.items()]
-    options_internal = list(MENU_MAP.keys())
-    current_idx = options_internal.index(st.session_state.internal_nav) if st.session_state.internal_nav in options_internal else 0
     
-    # NAVIGATION
-    selected_display = st.radio("Nav", options_display, index=current_idx, label_visibility="collapsed")
-    st.session_state.internal_nav = options_internal[options_display.index(selected_display)]
+    # Menü Optionen (Mit Icons)
+    options_display = T("menu_opts")
+    
+    # Index finden
+    current_idx = 0
+    if st.session_state.internal_nav in INTERNAL_KEYS:
+        current_idx = INTERNAL_KEYS.index(st.session_state.internal_nav)
+    
+    selected_display = st.radio("nav_hidden", options_display, index=current_idx, label_visibility="collapsed")
+    
+    # Update State
+    new_idx = options_display.index(selected_display)
+    st.session_state.internal_nav = INTERNAL_KEYS[new_idx]
     
     st.divider()
-    if st.button("⟳ Refresh"): refresh_data()
+    if st.button("⟳ Reload"): refresh_data()
 
-# --- NEW LIST CARD RENDERER ---
+# --- CARD RENDERER (LIST VIEW) ---
 def render_card(r_name, context="all"):
     img = PLACEHOLDER_IMG; cat = ""
     if not df_m.empty:
@@ -175,27 +163,25 @@ def render_card(r_name, context="all"):
         z_rows = df_z[df_z['Rezept'] == r_name]
         if not z_rows.empty: is_fav = z_rows.iloc[0]['is_fav']
 
-    # LIST LAYOUT: CONTAINER MIT SPALTEN
     with st.container(border=True):
-        # Spaltenverhältnis: Bild (1 Teil) : Text (2.5 Teile)
-        c_img, c_txt = st.columns([1, 2.2])
+        # Spalten: Bild (klein) | Text (groß)
+        c1, c2 = st.columns([1, 2]) 
         
-        with c_img:
-            # Bild Container
+        with c1:
             st.markdown(f"""<div class="list-img" style="background-image: url('{img}');"></div>""", unsafe_allow_html=True)
             
-        with c_txt:
-            # Text Info
+        with c2:
             st.markdown(f"""
-            <span class="recipe-cat">{cat if cat else "Rezept"}</span>
-            <span class="recipe-title">{r_name}</span>
+            <div style="padding: 5px;">
+                <span class="recipe-cat">{cat if cat else "Recipe"}</span>
+                <div class="recipe-title" title="{r_name}">{r_name}</div>
+            </div>
             """, unsafe_allow_html=True)
             
-            # Buttons untereinander im Text-Bereich
-            c_btn1, c_btn2 = st.columns([3, 1])
-            c_btn1.button(T("to_rec"), key=f"btn_{context}_{r_name}", use_container_width=True, on_click=go_to_recipe_callback, args=(r_name,))
-            fav_label = "★" if is_fav else "☆"
-            if c_btn2.button(fav_label, key=f"fav_{context}_{r_name}", use_container_width=True): 
+            b1, b2 = st.columns([3, 1])
+            b1.button(T("to_rec"), key=f"btn_{context}_{r_name}", use_container_width=True, on_click=go_to_recipe_callback, args=(r_name,))
+            fav_char = "★" if is_fav else "☆"
+            if b2.button(fav_char, key=f"fav_{context}_{r_name}", use_container_width=True):
                 fav_callback(r_name, is_fav)
 
 # === CONTENT ===
@@ -208,9 +194,9 @@ if active_nav == "dashboard":
     if df_z is None or df_z.empty:
         st.info(T("dash_intro"))
         c1, c2 = st.columns(2)
-        if c1.button(f"📥 {T('nav_import')}", type="primary", use_container_width=True): 
+        if c1.button(f"📥 {T('feat_1_t')}", type="primary", use_container_width=True): 
             st.session_state.internal_nav = "import"; st.rerun()
-        if c2.button(f"📝 {T('nav_edit')}", use_container_width=True): 
+        if c2.button(f"📝 {T('feat_4_t')}", use_container_width=True): 
             st.session_state.internal_nav = "edit"; st.rerun()
     else:
         if search_query:
@@ -221,7 +207,10 @@ if active_nav == "dashboard":
                  filtered = list(set(filtered + cat_matches))
             st.write(f"🔎 **{len(filtered)}**")
             if filtered:
-                for r in filtered: render_card(r, "search") # KEIN GRID MEHR, SONDERN LISTE
+                # WICHTIG: 2 Spalten Layout
+                cols = st.columns(2)
+                for i, r in enumerate(filtered): 
+                    with cols[i%2]: render_card(r, "search")
             else: st.warning(T("no_rec"))
         else:
             if st.button(f"🎲 {T('random_btn')}", use_container_width=True):
@@ -233,7 +222,9 @@ if active_nav == "dashboard":
             favs = df_z[df_z['is_fav'] == True]['Rezept'].unique()
             if len(favs) > 0:
                 st.subheader(T("favs"))
-                for f in favs: render_card(f, "fav") # LISTE
+                cols = st.columns(2)
+                for i, f in enumerate(favs): 
+                    with cols[i%2]: render_card(f, "fav")
                 st.write("---")
 
             st.subheader(T("all_rec"))
@@ -245,11 +236,13 @@ if active_nav == "dashboard":
                  dis_list = [r for r in dis_list if r in valid]
             
             if dis_list:
-                for r in dis_list: render_card(r, "all") # LISTE
+                cols = st.columns(2)
+                for i, r in enumerate(dis_list): 
+                    with cols[i%2]: render_card(r, "all")
 
 # 7. PROFIL
 elif active_nav == "profile":
-    st.title(T("nav_profile"))
+    st.title("Profile")
     st.info(f"👤 **{st.session_state.user_name}**\n\n{st.session_state.user_email}")
     if st.button(T("logout"), type="primary", use_container_width=True):
         st.session_state.user_email = None; st.session_state.user_name = None; st.rerun()
@@ -270,7 +263,7 @@ elif active_nav == "profile":
             if st.form_submit_button(T("pw_upd")):
                 if np1 and np1 == np2:
                     change_user_password(st.session_state.user_email, np1, st.session_state.sh_u)
-                    st.success(T("pw_success"))
+                    st.success(T("success"))
                 else: st.error("Mismatch")
 
 # 2. SAMMLUNGEN
@@ -285,11 +278,13 @@ elif active_nav == "collections":
                     refresh_data()
     if not df_o.empty:
         folders = [f for f in df_o['OrdnerName'].unique() if f]
-        sel_f = st.selectbox("Ordner wählen", folders, label_visibility="collapsed")
+        sel_f = st.selectbox("Ordner", folders, label_visibility="collapsed")
         if sel_f:
             recs = [r for r in df_o[df_o['OrdnerName'] == sel_f]['Rezept'].unique() if r != "INIT_HIDDEN"]
             if recs:
-                for r in recs: render_card(r, f"coll_{sel_f}")
+                cols = st.columns(2)
+                for i, r in enumerate(recs):
+                    with cols[i%2]: render_card(r, f"coll_{sel_f}")
             else: st.info(T("no_rec"))
 
 # 3. EINKAUF
@@ -334,7 +329,6 @@ elif active_nav == "cook":
             
             current_lang = st.session_state.lang_code
             display_data = {}
-            
             if current_lang != "EN" and current_lang != "DE":
                 cache_key = f"{rezept}_{current_lang}"
                 if "trans_cache" in st.session_state and st.session_state.trans_cache.get("key") == cache_key:
