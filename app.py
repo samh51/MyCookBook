@@ -37,6 +37,10 @@ if not login_form(st.session_state.sh_u):
 # --- USER EMAIL HOLEN ---
 user_email = st.session_state.user_email
 
+# --- EINKAUFSLISTE STATE INIT (WICHTIG!) ---
+if "shop_checked" not in st.session_state:
+    st.session_state.shop_checked = set()
+
 # --- DATEN FÜR USER LADEN ---
 if "df_z" not in st.session_state or st.session_state.df_z is None:
     st.session_state.df_z, st.session_state.df_s, st.session_state.df_m, \
@@ -130,7 +134,7 @@ MENU_MAP = {
     "cook": "nav_cook", "import": "nav_import", "edit": "nav_edit", "profile": "nav_profile"
 }
 
-# --- ALIAS DEFINITIONEN (Hier fehlte df_o!) ---
+# Alias
 df_z = st.session_state.df_z
 df_s = st.session_state.df_s
 df_m = st.session_state.df_m
@@ -156,7 +160,6 @@ def fav_callback(r_name, is_currently_fav):
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("### My Cookbook")
-    # FIX: Label visibility statt leerer String
     search_query = st.text_input("Search", placeholder=T("search_ph"), label_visibility="collapsed").lower().strip()
     st.write("") 
     
@@ -406,7 +409,6 @@ elif active_nav == "cook":
             if c2.button("★ Favorit" if not is_fav else "☆ Entfernen", use_container_width=True):
                 toggle_favorit(rezept, is_fav, sh_z); refresh_data()
             
-            # HIER WAR DER NAME ERROR (df_o war unbekannt)
             with st.popover(T("save_coll_title")):
                 if not df_o.empty:
                     tf = st.selectbox("Collection", [f for f in df_o['OrdnerName'].unique() if f])
