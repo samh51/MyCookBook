@@ -5,6 +5,7 @@ oauth2client
 bcrypt
 google-generativeai
 youtube-transcript-api
-yt-dlp
+yt-dlp>=2024.0.0
 Pillow
 requests
+fake-useragent
