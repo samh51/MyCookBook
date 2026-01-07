@@ -62,7 +62,7 @@ TRANSLATIONS = {
         "nav_cook": "Cook", "nav_import": "Import", "nav_edit": "Editor", "nav_profile": "Profile",
         "search_ph": "Search recipes...", "welcome": "Hey", "favs": "Favorites", "all_rec": "Cookbook",
         "no_rec": "Nothing found here.", "random": "Inspiration", "random_btn": "Surprise Me",
-        "to_rec": "View", "ingredients": "Ingredients", "steps": "Steps",
+        "to_rec": "Open", "ingredients": "Ingredients", "steps": "Steps",
         "save": "Save", "delete": "Delete", "calc_macros": "Calc Macros",
         "portions": "Servings", "import_btn": "Analyze",
         "url_ph": "Paste Link (Instagram/YouTube)", "folder_new": "New Collection",
@@ -82,7 +82,7 @@ TRANSLATIONS = {
         "nav_cook": "Kochen", "nav_import": "Importieren", "nav_edit": "Editor", "nav_profile": "Profil",
         "search_ph": "Suchen...", "welcome": "Hallo", "favs": "Favoriten", "all_rec": "Rezeptbuch",
         "no_rec": "Nichts gefunden.", "random": "Inspiration", "random_btn": "Überraschung",
-        "to_rec": "Ansehen", "ingredients": "Zutaten", "steps": "Schritte",
+        "to_rec": "Öffnen", "ingredients": "Zutaten", "steps": "Schritte",
         "save": "Speichern", "delete": "Löschen", "calc_macros": "Makros berechnen",
         "portions": "Portionen", "import_btn": "Analysieren",
         "url_ph": "Link einfügen (Insta/YouTube)", "folder_new": "Neue Sammlung",
@@ -143,27 +143,25 @@ def fav_callback(r_name, is_currently_fav):
     toggle_favorit(r_name, is_currently_fav, sh_z)
     refresh_data()
 
-# --- SIDEBAR (Menü) ---
+# --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("### 👨‍🍳 MyCookbook")
-    
-    search_query = st.text_input("Suche", placeholder=T("search_ph"), label_visibility="collapsed").lower().strip()
-    st.write("")
+    st.markdown("### My Cookbook")
+    search_query = st.text_input("Search", placeholder=T("search_ph"), label_visibility="collapsed").lower().strip()
+    st.write("") 
     
     if "internal_nav" not in st.session_state: st.session_state.internal_nav = "dashboard"
     options_display = [T(v) for k, v in MENU_MAP.items()]
     options_internal = list(MENU_MAP.keys())
-    
     current_idx = options_internal.index(st.session_state.internal_nav) if st.session_state.internal_nav in options_internal else 0
     
-    # HIER LABEL LEER LASSEN
-    selected_display = st.radio("", options_display, index=current_idx, label_visibility="collapsed")
+    # NAVIGATION
+    selected_display = st.radio("Nav", options_display, index=current_idx, label_visibility="collapsed")
     st.session_state.internal_nav = options_internal[options_display.index(selected_display)]
     
     st.divider()
-    if st.button("⟳ Reload Data"): refresh_data()
+    if st.button("⟳ Refresh"): refresh_data()
 
-# --- CARD RENDERER (Optimiert) ---
+# --- NEW LIST CARD RENDERER ---
 def render_card(r_name, context="all"):
     img = PLACEHOLDER_IMG; cat = ""
     if not df_m.empty:
@@ -177,21 +175,28 @@ def render_card(r_name, context="all"):
         z_rows = df_z[df_z['Rezept'] == r_name]
         if not z_rows.empty: is_fav = z_rows.iloc[0]['is_fav']
 
+    # LIST LAYOUT: CONTAINER MIT SPALTEN
     with st.container(border=True):
-        st.markdown(f"""<div class="recipe-card-img" style="background-image: url('{img}');"></div>""", unsafe_allow_html=True)
-        st.markdown(f"""
-        <div class="card-content">
-            <span class="recipe-cat">{cat if cat else "Recipe"}</span>
-            <span class="recipe-title" title="{r_name}">{r_name}</span>
-        </div>
-        """, unsafe_allow_html=True)
+        # Spaltenverhältnis: Bild (1 Teil) : Text (2.5 Teile)
+        c_img, c_txt = st.columns([1, 2.2])
         
-        c_btn, c_star = st.columns([3, 1])
-        c_btn.button(T("to_rec"), key=f"btn_{context}_{r_name}", use_container_width=True, on_click=go_to_recipe_callback, args=(r_name,))
-        
-        fav_label = "★" if is_fav else "☆"
-        if c_star.button(fav_label, key=f"fav_{context}_{r_name}", use_container_width=True): 
-            fav_callback(r_name, is_fav)
+        with c_img:
+            # Bild Container
+            st.markdown(f"""<div class="list-img" style="background-image: url('{img}');"></div>""", unsafe_allow_html=True)
+            
+        with c_txt:
+            # Text Info
+            st.markdown(f"""
+            <span class="recipe-cat">{cat if cat else "Rezept"}</span>
+            <span class="recipe-title">{r_name}</span>
+            """, unsafe_allow_html=True)
+            
+            # Buttons untereinander im Text-Bereich
+            c_btn1, c_btn2 = st.columns([3, 1])
+            c_btn1.button(T("to_rec"), key=f"btn_{context}_{r_name}", use_container_width=True, on_click=go_to_recipe_callback, args=(r_name,))
+            fav_label = "★" if is_fav else "☆"
+            if c_btn2.button(fav_label, key=f"fav_{context}_{r_name}", use_container_width=True): 
+                fav_callback(r_name, is_fav)
 
 # === CONTENT ===
 active_nav = st.session_state.internal_nav
@@ -214,11 +219,9 @@ if active_nav == "dashboard":
             if not df_m.empty and 'Kategorie' in df_m.columns:
                  cat_matches = df_m[df_m['Kategorie'].str.lower().str.contains(search_query, na=False)]['Rezept'].tolist()
                  filtered = list(set(filtered + cat_matches))
-            st.write(f"🔎 **{len(filtered)}** results")
+            st.write(f"🔎 **{len(filtered)}**")
             if filtered:
-                cols = st.columns(2) # 2 SPALTEN!
-                for i, r in enumerate(filtered): 
-                    with cols[i%2]: render_card(r, "search")
+                for r in filtered: render_card(r, "search") # KEIN GRID MEHR, SONDERN LISTE
             else: st.warning(T("no_rec"))
         else:
             if st.button(f"🎲 {T('random_btn')}", use_container_width=True):
@@ -230,14 +233,11 @@ if active_nav == "dashboard":
             favs = df_z[df_z['is_fav'] == True]['Rezept'].unique()
             if len(favs) > 0:
                 st.subheader(T("favs"))
-                cols = st.columns(2) # 2 SPALTEN
-                for i, f in enumerate(favs): 
-                    with cols[i%2]: render_card(f, "fav")
+                for f in favs: render_card(f, "fav") # LISTE
                 st.write("---")
 
             st.subheader(T("all_rec"))
             cats = st.multiselect("Filter", CATEGORIES, label_visibility="collapsed", placeholder="Kategorie...")
-            
             all_r = sorted(df_z['Rezept'].unique())
             dis_list = [r for r in all_r if r not in favs]
             if cats and not df_m.empty:
@@ -245,9 +245,7 @@ if active_nav == "dashboard":
                  dis_list = [r for r in dis_list if r in valid]
             
             if dis_list:
-                cols = st.columns(2) # 2 SPALTEN
-                for i, r in enumerate(dis_list): 
-                    with cols[i%2]: render_card(r, "all")
+                for r in dis_list: render_card(r, "all") # LISTE
 
 # 7. PROFIL
 elif active_nav == "profile":
@@ -291,9 +289,7 @@ elif active_nav == "collections":
         if sel_f:
             recs = [r for r in df_o[df_o['OrdnerName'] == sel_f]['Rezept'].unique() if r != "INIT_HIDDEN"]
             if recs:
-                cols = st.columns(2)
-                for i, r in enumerate(recs):
-                    with cols[i%2]: render_card(r, f"coll_{sel_f}")
+                for r in recs: render_card(r, f"coll_{sel_f}")
             else: st.info(T("no_rec"))
 
 # 3. EINKAUF
