@@ -28,7 +28,7 @@ apply_custom_css()
 # --- DATENBANK INIT ---
 if "sh_u" not in st.session_state:
     data = get_data(None)
-    st.session_state.sh_u = data[12] # User Sheet
+    st.session_state.sh_u = data[12] 
 
 # --- LOGIN CHECK ---
 if not login_form(st.session_state.sh_u):
@@ -130,9 +130,18 @@ MENU_MAP = {
     "cook": "nav_cook", "import": "nav_import", "edit": "nav_edit", "profile": "nav_profile"
 }
 
-# Alias
-df_z = st.session_state.df_z; df_m = st.session_state.df_m
-sh_z = st.session_state.sh_z; sh_s = st.session_state.sh_s; sh_m = st.session_state.sh_m; sh_e = st.session_state.sh_e; sh_o = st.session_state.sh_o
+# --- ALIAS DEFINITIONEN (Hier fehlte df_o!) ---
+df_z = st.session_state.df_z
+df_s = st.session_state.df_s
+df_m = st.session_state.df_m
+df_e = st.session_state.df_e
+df_o = st.session_state.df_o
+
+sh_z = st.session_state.sh_z
+sh_s = st.session_state.sh_s
+sh_m = st.session_state.sh_m
+sh_e = st.session_state.sh_e
+sh_o = st.session_state.sh_o
 
 # --- CALLBACKS ---
 def go_to_recipe_callback(r_name):
@@ -147,7 +156,8 @@ def fav_callback(r_name, is_currently_fav):
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("### My Cookbook")
-    search_query = st.text_input("", placeholder=T("search_ph")).lower().strip()
+    # FIX: Label visibility statt leerer String
+    search_query = st.text_input("Search", placeholder=T("search_ph"), label_visibility="collapsed").lower().strip()
     st.write("") 
     
     if "internal_nav" not in st.session_state: st.session_state.internal_nav = "dashboard"
@@ -396,6 +406,7 @@ elif active_nav == "cook":
             if c2.button("★ Favorit" if not is_fav else "☆ Entfernen", use_container_width=True):
                 toggle_favorit(rezept, is_fav, sh_z); refresh_data()
             
+            # HIER WAR DER NAME ERROR (df_o war unbekannt)
             with st.popover(T("save_coll_title")):
                 if not df_o.empty:
                     tf = st.selectbox("Collection", [f for f in df_o['OrdnerName'].unique() if f])
