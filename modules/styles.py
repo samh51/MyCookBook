@@ -3,18 +3,11 @@ import streamlit as st
 def apply_custom_css():
     st.markdown("""
         <style>
-        /* --- FONT: INTER --- */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        :root {
-            --bg-color: #ffffff;
-            --text-color: #111111;
-            --sub-text: #666666;
-        }
-
         html, body, [class*="css"] {
             font-family: 'Inter', sans-serif;
-            color: var(--text-color);
+            color: #111;
         }
 
         /* --- SIDEBAR --- */
@@ -22,31 +15,29 @@ def apply_custom_css():
             background-color: #f9f9f9;
         }
         
-        /* WICHTIG: Versteckt das Label "Navigation" über den Radio Buttons komplett */
-        [data-testid="stSidebar"] label {
+        /* Das "Navigation" Label sauber verstecken (nur das obere) */
+        [data-testid="stSidebar"] [data-testid="stWidgetLabel"] {
             display: none !important;
         }
 
-        /* --- RADIO BUTTONS (Kacheln) --- */
-        .stRadio > div { gap: 8px; }
+        /* RADIO BUTTONS (Kacheln) */
+        .stRadio > div { gap: 6px; }
         
         .stRadio label {
             background-color: white;
-            padding: 10px 14px !important;
-            border-radius: 10px;
-            border: 1px solid #e0e0e0;
+            padding: 10px 12px !important;
+            border-radius: 8px;
+            border: 1px solid #e5e5e5;
             cursor: pointer;
             margin-bottom: 2px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
         }
         
-        /* Kreis weg */
         .stRadio div[role="radiogroup"] > label > div:first-child { display: none; }
         
-        /* Text Styling */
         .stRadio label p {
             font-size: 15px !important;
-            font-weight: 600;
+            font-weight: 500;
             margin: 0;
             color: #444;
         }
@@ -58,89 +49,69 @@ def apply_custom_css():
         }
         .stRadio label[data-checked="true"] p { color: #ffffff !important; }
 
-        /* --- REZEPT KARTEN --- */
+        /* --- LIST CARD (Container) --- */
         div[data-testid="stVerticalBlockBorderWrapper"] {
-            border: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
             border-radius: 12px;
-            overflow: hidden;
             background: white;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
+            padding: 8px !important; /* Innenabstand für den Rahmen */
         }
         
-        /* Bild Hochformat 9:16 Optimiert */
-        .recipe-card-img {
+        /* BILD (Links) */
+        .list-img {
             width: 100%;
-            padding-top: 130%; /* Hochformat */
+            height: 100px; /* Feste Höhe für Einheitlichkeit */
             background-size: cover;
             background-position: center;
+            border-radius: 8px;
         }
 
-        /* Text Bereich */
-        .card-content { padding: 8px 8px 4px 8px; }
-
+        /* TITEL */
         .recipe-title {
             font-weight: 700;
-            font-size: 15px; /* Lesbar */
+            font-size: 16px;
             color: #000;
             line-height: 1.2;
-            margin-bottom: 2px;
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2; /* Max 2 Zeilen Text */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
         
+        /* KATEGORIE */
         .recipe-cat {
             font-size: 11px;
             color: #888;
-            text-transform: uppercase;
             font-weight: 600;
-            margin-bottom: 6px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
             display: block;
         }
 
-        /* Buttons */
+        /* BUTTONS (Kompakt) */
         div.stButton > button {
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 13px;
-            padding: 4px 0px;
-            border: 1px solid #eee;
-            background-color: #f7f7f7;
-            color: #333;
-            width: 100%;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 12px !important;
+            padding: 2px 0px;
             min-height: 32px;
+            border: 1px solid #eee;
+            background-color: #fff;
         }
-
-        /* --- MOBILE LAYOUT FIX (2 SPALTEN ERZWINGEN) --- */
+        
+        /* Mobile Anpassungen */
         @media (max-width: 768px) {
-            
-            /* Container für Spalten */
-            [data-testid="column"] {
-                width: 48% !important;        /* Etwas weniger als 50% wegen Gaps */
-                flex: 0 0 48% !important;     /* Flexgrow verhindern */
-                min-width: 0 !important;      /* WICHTIG: Erlaubt Verkleinern */
-                padding: 0 4px !important;    /* Engere Abstände */
-            }
-            
-            /* Fix für Streamlit Spalten-Gap */
-            [data-testid="column"] > div {
-                width: 100% !important;
-            }
-
-            /* Container padding reduzieren */
             .block-container {
                 padding-top: 1rem !important;
                 padding-left: 0.5rem !important;
                 padding-right: 0.5rem !important;
             }
-            
-            /* Schriftgröße auf Mobile leicht anpassen */
-            .recipe-title { font-size: 14px !important; }
-            .recipe-cat { font-size: 10px !important; }
-            
-            /* Toast nach oben */
-            .stToast { top: 5px; right: 5px; width: 90%; }
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                margin-bottom: 8px;
+            }
         }
         </style>
     """, unsafe_allow_html=True)
