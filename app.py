@@ -96,10 +96,29 @@ TRANSLATIONS = {
         "feat_4_t": "Ordnung", "feat_4_d": "Sammlungen & Favoriten.",
         "prof_set": "Einstellungen", "prof_lang": "Sprache", "prof_pw": "Passwort",
         "pw_old": "Alt", "pw_new": "Neues Passwort", "pw_upd": "Ändern", "pw_success": "Geändert!"
+    },
+    "ES": {
+        "nav_dash": "⌂ Tablero", "nav_coll": "◫ Colecciones", "nav_shop": "≡ Lista de Compras", 
+        "nav_cook": "♨ Cocinar", "nav_import": "⬇ Importar", "nav_edit": "⚙ Editor", "nav_profile": "👤 Perfil",
+        "search_ph": "Buscar...", "welcome": "Bienvenido", "favs": "Favoritos", "all_rec": "Recetario",
+        "no_rec": "No se encontraron recetas.", "random": "Inspiración", "random_btn": "Sorpresa",
+        "to_rec": "Ver", "ingredients": "Ingredientes", "steps": "Instrucciones",
+        "save": "Guardar", "delete": "Borrar", "calc_macros": "Calc Macros IA",
+        "portions": "Porciones", "import_btn": "Analizar y Guardar",
+        "url_ph": "Enlace a YouTube / Instagram / TikTok", "folder_new": "Nueva Colección",
+        "add_shop": "Añadir a lista", "clean_shop": "Limpiar lista", "clear_shop": "Borrar todo",
+        "save_coll_title": "Guardar en colección", "save_coll_btn": "Añadir",
+        "translating": "Traduciendo...", "logout": "Cerrar Sesión", "success": "¡Éxito!",
+        "dash_intro": "Tu asistente de cocina digital. Esto es lo que puedes hacer:",
+        "feat_1_t": "Importar IA", "feat_1_d": "Pega un enlace. La IA extrae ingredientes automáticamente.",
+        "feat_2_t": "Nutrición", "feat_2_d": "Cálculo automático de macros por porción.",
+        "feat_3_t": "Compras", "feat_3_d": "Ajusta las porciones y añade ingredientes a tu lista.",
+        "feat_4_t": "Organizar", "feat_4_d": "Crea colecciones personalizadas y marca tus favoritos.",
+        "prof_set": "Ajustes", "prof_lang": "Idioma", "prof_pw": "Cambiar Contraseña",
+        "pw_old": "Contraseña anterior", "pw_new": "Nueva contraseña", "pw_upd": "Actualizar", "pw_success": "¡Actualizado!"
     }
 }
-# Fallback für andere Sprachen (auf EN setzen für Einfachheit im Code)
-for l in ["FR", "IT", "PL", "ES"]: TRANSLATIONS[l] = TRANSLATIONS["EN"]
+for l in ["FR", "IT", "PL"]: TRANSLATIONS[l] = TRANSLATIONS["EN"]
 
 if "lang_code" not in st.session_state: st.session_state.lang_code = "EN"
 def T(key): return TRANSLATIONS[st.session_state.lang_code].get(key, TRANSLATIONS["EN"].get(key, key))
@@ -128,7 +147,6 @@ def fav_callback(r_name, is_currently_fav):
 with st.sidebar:
     st.markdown("### 👨‍🍳 MyCookbook")
     
-    # Suche direkt im Menü
     search_query = st.text_input("Suche", placeholder=T("search_ph"), label_visibility="collapsed").lower().strip()
     st.write("")
     
@@ -136,15 +154,16 @@ with st.sidebar:
     options_display = [T(v) for k, v in MENU_MAP.items()]
     options_internal = list(MENU_MAP.keys())
     
-    # Menü Rendering
     current_idx = options_internal.index(st.session_state.internal_nav) if st.session_state.internal_nav in options_internal else 0
-    selected_display = st.radio("Navigation", options_display, index=current_idx, label_visibility="collapsed")
+    
+    # HIER LABEL LEER LASSEN
+    selected_display = st.radio("", options_display, index=current_idx, label_visibility="collapsed")
     st.session_state.internal_nav = options_internal[options_display.index(selected_display)]
     
     st.divider()
     if st.button("⟳ Reload Data"): refresh_data()
 
-# --- CARD RENDERER (Optimiert für Mobile) ---
+# --- CARD RENDERER (Optimiert) ---
 def render_card(r_name, context="all"):
     img = PLACEHOLDER_IMG; cat = ""
     if not df_m.empty:
@@ -159,21 +178,17 @@ def render_card(r_name, context="all"):
         if not z_rows.empty: is_fav = z_rows.iloc[0]['is_fav']
 
     with st.container(border=True):
-        # Bild
         st.markdown(f"""<div class="recipe-card-img" style="background-image: url('{img}');"></div>""", unsafe_allow_html=True)
-        # Text Body
         st.markdown(f"""
         <div class="card-content">
-            <span class="recipe-cat">{cat if cat else "Rezept"}</span>
+            <span class="recipe-cat">{cat if cat else "Recipe"}</span>
             <span class="recipe-title" title="{r_name}">{r_name}</span>
         </div>
         """, unsafe_allow_html=True)
         
-        # Buttons (Grid innerhalb der Karte)
         c_btn, c_star = st.columns([3, 1])
         c_btn.button(T("to_rec"), key=f"btn_{context}_{r_name}", use_container_width=True, on_click=go_to_recipe_callback, args=(r_name,))
         
-        # Stern als Button (Symbole statt Text für Platz)
         fav_label = "★" if is_fav else "☆"
         if c_star.button(fav_label, key=f"fav_{context}_{r_name}", use_container_width=True): 
             fav_callback(r_name, is_fav)
@@ -186,7 +201,6 @@ if active_nav == "dashboard":
     st.title(f"{T('welcome')}, {st.session_state.user_name}!")
     
     if df_z is None or df_z.empty:
-        # Empty State
         st.info(T("dash_intro"))
         c1, c2 = st.columns(2)
         if c1.button(f"📥 {T('nav_import')}", type="primary", use_container_width=True): 
@@ -194,7 +208,6 @@ if active_nav == "dashboard":
         if c2.button(f"📝 {T('nav_edit')}", use_container_width=True): 
             st.session_state.internal_nav = "edit"; st.rerun()
     else:
-        # Rezepte Anzeigen
         if search_query:
             all_r = sorted(df_z['Rezept'].unique())
             filtered = [r for r in all_r if search_query in r.lower()]
@@ -203,29 +216,25 @@ if active_nav == "dashboard":
                  filtered = list(set(filtered + cat_matches))
             st.write(f"🔎 **{len(filtered)}** results")
             if filtered:
-                # WICHTIG: Hier auf 2 Spalten stellen für bessere Mobile Ansicht
-                cols = st.columns(2) 
+                cols = st.columns(2) # 2 SPALTEN!
                 for i, r in enumerate(filtered): 
                     with cols[i%2]: render_card(r, "search")
             else: st.warning(T("no_rec"))
         else:
-            # Zufall (Kompakt)
             if st.button(f"🎲 {T('random_btn')}", use_container_width=True):
                 all_r = sorted(df_z['Rezept'].unique())
                 if all_r:
                     r = random.choice(all_r)
                     go_to_recipe_callback(r); st.rerun()
 
-            # Favoriten
             favs = df_z[df_z['is_fav'] == True]['Rezept'].unique()
             if len(favs) > 0:
                 st.subheader(T("favs"))
-                cols = st.columns(2)
+                cols = st.columns(2) # 2 SPALTEN
                 for i, f in enumerate(favs): 
                     with cols[i%2]: render_card(f, "fav")
                 st.write("---")
 
-            # Alle Rezepte
             st.subheader(T("all_rec"))
             cats = st.multiselect("Filter", CATEGORIES, label_visibility="collapsed", placeholder="Kategorie...")
             
@@ -236,23 +245,18 @@ if active_nav == "dashboard":
                  dis_list = [r for r in dis_list if r in valid]
             
             if dis_list:
-                cols = st.columns(2) # IMMER 2 SPALTEN FÜR MOBILE OPTIMIERUNG
+                cols = st.columns(2) # 2 SPALTEN
                 for i, r in enumerate(dis_list): 
                     with cols[i%2]: render_card(r, "all")
 
 # 7. PROFIL
 elif active_nav == "profile":
     st.title(T("nav_profile"))
-    
     st.info(f"👤 **{st.session_state.user_name}**\n\n{st.session_state.user_email}")
-    
     if st.button(T("logout"), type="primary", use_container_width=True):
         st.session_state.user_email = None; st.session_state.user_name = None; st.rerun()
-    
     st.divider()
     st.subheader(T("prof_set"))
-    
-    # Sprache
     curr_lang_name = CODE_TO_NAME.get(st.session_state.lang_code, "English")
     sel_lang_name = st.selectbox(T("prof_lang"), list(LANGUAGES.keys()), index=list(LANGUAGES.keys()).index(curr_lang_name))
     if st.button(T("save")):
@@ -260,9 +264,7 @@ elif active_nav == "profile":
         update_user_language(st.session_state.user_email, new_code, st.session_state.sh_u)
         st.session_state.lang_code = new_code
         st.success(T("success")); time.sleep(1); st.rerun()
-        
     st.divider()
-    # PW Ändern
     with st.expander(T("prof_pw")):
         with st.form("pw_change"):
             np1 = st.text_input(T("pw_new"), type="password")
@@ -283,7 +285,6 @@ elif active_nav == "collections":
                 if df_o.empty or new_f not in df_o['OrdnerName'].unique():
                     st.session_state.sh_o.append_row([new_f, "INIT_HIDDEN", st.session_state.user_email])
                     refresh_data()
-    
     if not df_o.empty:
         folders = [f for f in df_o['OrdnerName'].unique() if f]
         sel_f = st.selectbox("Ordner wählen", folders, label_visibility="collapsed")
@@ -302,18 +303,14 @@ elif active_nav == "shopping":
         local_df = df_e.copy()
         local_df['id'] = local_df['Zutat'] + "_" + local_df['Einheit']
         if "shop_checked" not in st.session_state: st.session_state.shop_checked = set()
-        
         local_df['done'] = local_df['id'].apply(lambda x: x in st.session_state.shop_checked)
         local_df = local_df.sort_values(by=['done', 'Zutat'])
-        
         def toggle(item_id):
             if item_id in st.session_state.shop_checked: st.session_state.shop_checked.remove(item_id)
             else: st.session_state.shop_checked.add(item_id)
-
         for _, row in local_df.iterrows():
             lbl = f"{row['Menge']} {row['Einheit']} {row['Zutat']}"
             st.checkbox(lbl, row['done'], key=f"chk_{row['id']}", on_change=toggle, args=(row['id'],))
-        
         st.divider()
         c1, c2 = st.columns(2)
         if c1.button(T("clean_shop")):
@@ -339,11 +336,10 @@ elif active_nav == "cook":
             orig_s = st.session_state.df_s[st.session_state.df_s['Rezept'] == rezept]
             orig_m = df_m[df_m['Rezept'] == rezept]
             
-            # Translate Logic
             current_lang = st.session_state.lang_code
             display_data = {}
             
-            if current_lang != "EN" and current_lang != "DE": # Nur bei Fremdsprachen übersetzen
+            if current_lang != "EN" and current_lang != "DE":
                 cache_key = f"{rezept}_{current_lang}"
                 if "trans_cache" in st.session_state and st.session_state.trans_cache.get("key") == cache_key:
                     display_data = st.session_state.trans_cache["data"]
@@ -362,7 +358,7 @@ elif active_nav == "cook":
                     "Schritte": orig_s.sort_values('Schritt_Nr')['Anweisung'].tolist()
                 }
 
-            # Header Bild
+            bp = float(orig_m['Portionen'].iloc[0]) if not orig_m.empty and orig_m['Portionen'].iloc[0] else 2.0
             img = PLACEHOLDER_IMG; url = ""
             if not orig_m.empty:
                 r0 = orig_m.iloc[0]
@@ -370,7 +366,6 @@ elif active_nav == "cook":
                 if str(r0['OriginalURL']).startswith("http"): url = r0['OriginalURL']
 
             st.markdown(f"""<div style="width: 100%; height: 250px; background-image: url('{img}'); background-size: cover; background-position: center; border-radius: 12px; margin-bottom: 20px;"></div>""", unsafe_allow_html=True)
-            
             st.markdown(f"### {display_data.get('Rezept', rezept)}")
             
             c_fav, c_coll = st.columns(2)
@@ -387,12 +382,9 @@ elif active_nav == "cook":
             if url: st.markdown(f"[Original Video]({url})")
             st.divider()
             
-            # Portionen
-            bp = float(orig_m['Portionen'].iloc[0]) if not orig_m.empty and orig_m['Portionen'].iloc[0] else 2.0
             c_p, c_shop = st.columns([1, 2])
             wp = c_p.number_input(T("portions"), 1, value=int(bp))
             fak = wp / bp if bp > 0 else 1
-            
             if c_shop.button(f"🛒 {T('add_shop')}", use_container_width=True):
                 tmp = orig_z.copy(); tmp['Menge'] *= fak
                 add_to_shopping_list(tmp, st.session_state.sh_e); refresh_data(); st.toast(T("success"))
@@ -406,7 +398,6 @@ elif active_nav == "cook":
             with t2:
                 st.write("")
                 for i, s in enumerate(display_data.get('Schritte', [])): st.markdown(f"**{i+1}.** {s}")
-            
             st.divider()
             if st.button(f"✏️ {T('nav_edit')}", use_container_width=True):
                  st.session_state.edit_recipe_name = rezept; st.session_state.internal_nav = "edit"; st.rerun()
