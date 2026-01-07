@@ -176,4 +176,339 @@ def render_card(r_name, context="all"):
 
     with st.container(border=True):
         st.markdown(f"""<div class="recipe-card-img" style="background-image: url('{img}');"></div>""", unsafe_allow_html=True)
-        st.markdown(f"""<div style="padding: 10px 10px
+        st.markdown(f"""<div style="padding: 10px 10px 0 10px;">
+            <span class="recipe-cat">{cat if cat else "Rezept"}</span>
+            <div style="height: 30px; overflow: hidden; margin-bottom: 5px;">
+                <span class="recipe-title" title="{r_name}">{r_name}</span>
+            </div></div>""", unsafe_allow_html=True)
+        c_btn, c_star = st.columns([4, 1])
+        c_btn.button(T("to_rec"), key=f"btn_{context}_{r_name}", use_container_width=True, on_click=go_to_recipe_callback, args=(r_name,))
+        if c_star.button("★" if is_fav else "☆", key=f"fav_{context}_{r_name}"): fav_callback(r_name, is_fav)
+
+# === CONTENT ===
+active_nav = st.session_state.internal_nav
+
+# 1. DASHBOARD
+if active_nav == "dashboard":
+    st.title(f"{T('welcome')}, {st.session_state.user_name}! 👋")
+    
+    if df_z is None or df_z.empty:
+        st.markdown(f"_{T('dash_intro')}_")
+        st.write("")
+        c1, c2, c3, c4 = st.columns(4)
+        with c1: st.info(f"**🎥 {T('feat_1_t')}**\n\n{T('feat_1_d')}")
+        with c2: st.success(f"**🥑 {T('feat_2_t')}**\n\n{T('feat_2_d')}")
+        with c3: st.warning(f"**🛒 {T('feat_3_t')}**\n\n{T('feat_3_d')}")
+        with c4: st.error(f"**📚 {T('feat_4_t')}**\n\n{T('feat_4_d')}")
+        st.divider()
+        cb1, cb2 = st.columns(2)
+        if cb1.button(f"🚀 {T('nav_import')}", type="primary", use_container_width=True): 
+            st.session_state.internal_nav = "import"; st.rerun()
+        if cb2.button(f"✏️ {T('nav_edit')}", use_container_width=True): 
+            st.session_state.internal_nav = "edit"; st.rerun()
+    else:
+        if search_query:
+            all_r = sorted(df_z['Rezept'].unique())
+            filtered = [r for r in all_r if search_query in r.lower()]
+            if not df_m.empty and 'Kategorie' in df_m.columns:
+                 cat_matches = df_m[df_m['Kategorie'].str.lower().str.contains(search_query, na=False)]['Rezept'].tolist()
+                 filtered = list(set(filtered + cat_matches))
+            st.markdown(f"**Results:** {search_query}")
+            if filtered:
+                cols = st.columns(3)
+                for i, r in enumerate(filtered): 
+                    with cols[i%3]: render_card(r, "search")
+            else: st.info(T("no_rec"))
+        else:
+            with st.expander(f"🎲 {T('random')}", expanded=False):
+                c1, c2 = st.columns([3, 1])
+                rc = c1.selectbox("Category", ["Alle"] + CATEGORIES, label_visibility="collapsed")
+                if c2.button(T("random_btn"), type="primary", use_container_width=True):
+                    all_r = sorted(df_z['Rezept'].unique())
+                    pool = all_r
+                    if rc != "Alle" and not df_m.empty: pool = df_m[df_m['Kategorie'] == rc]['Rezept'].tolist()
+                    if pool:
+                        cols = st.columns(3)
+                        for i, r in enumerate(random.sample(pool, min(len(pool), 3))): 
+                            with cols[i]: render_card(r, "rand")
+
+            favs = df_z[df_z['is_fav'] == True]['Rezept'].unique()
+            if len(favs) > 0:
+                st.markdown(f"### {T('favs')}")
+                cols = st.columns(3)
+                for i, f in enumerate(favs): 
+                    with cols[i%3]: render_card(f, "fav")
+                st.write("")
+
+            st.markdown(f"### {T('all_rec')}")
+            all_r = sorted(df_z['Rezept'].unique())
+            cats = st.multiselect("Filter", CATEGORIES, label_visibility="collapsed")
+            dis_list = [r for r in all_r if r not in favs]
+            if cats and not df_m.empty:
+                 valid = df_m[df_m['Kategorie'].isin(cats)]['Rezept'].tolist()
+                 dis_list = [r for r in dis_list if r in valid]
+            if dis_list:
+                cols = st.columns(3)
+                for i, r in enumerate(dis_list): 
+                    with cols[i%3]: render_card(r, "all")
+
+# 7. PROFIL
+elif active_nav == "profile":
+    st.title(T("nav_profile"))
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.markdown(f"""
+        <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; text-align: center;">
+            <div style="font-size: 40px;">👤</div>
+            <h3>{st.session_state.user_name}</h3>
+            <p>{st.session_state.user_email}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button(T("logout"), type="secondary", use_container_width=True):
+            st.session_state.user_email = None; st.session_state.user_name = None; st.rerun()
+
+    with c2:
+        st.subheader(T("prof_set"))
+        curr_lang_name = CODE_TO_NAME.get(st.session_state.lang_code, "English")
+        sel_lang_name = st.selectbox(T("prof_lang"), list(LANGUAGES.keys()), index=list(LANGUAGES.keys()).index(curr_lang_name))
+        
+        if st.button(T("save")):
+            new_code = LANGUAGES[sel_lang_name]
+            update_user_language(st.session_state.user_email, new_code, st.session_state.sh_u)
+            st.session_state.lang_code = new_code
+            st.success(T("success")); time.sleep(1); st.rerun()
+            
+        st.divider()
+        st.subheader(T("prof_pw"))
+        with st.form("pw_change"):
+            np1 = st.text_input(T("pw_new"), type="password")
+            np2 = st.text_input("Confirm", type="password")
+            if st.form_submit_button(T("pw_upd")):
+                if np1 and np1 == np2:
+                    change_user_password(st.session_state.user_email, np1, st.session_state.sh_u)
+                    st.success(T("pw_success"))
+                else: st.error("Passwords do not match.")
+
+elif active_nav == "collections":
+    st.title(T("nav_coll"))
+    with st.expander(T("folder_new")):
+        with st.form("new_folder"):
+            c1, c2 = st.columns([3,1])
+            new_f = c1.text_input("Name")
+            if c2.form_submit_button(T("save")) and new_f:
+                if df_o.empty or new_f not in df_o['OrdnerName'].unique():
+                    st.session_state.sh_o.append_row([new_f, "INIT_HIDDEN", st.session_state.user_email])
+                    refresh_data()
+    st.divider()
+    if not df_o.empty:
+        folders = [f for f in df_o['OrdnerName'].unique() if f]
+        sel_f = st.selectbox("Collection", folders, label_visibility="collapsed")
+        if sel_f:
+            recs = [r for r in df_o[df_o['OrdnerName'] == sel_f]['Rezept'].unique() if r != "INIT_HIDDEN"]
+            if recs:
+                cols = st.columns(3)
+                for i, r in enumerate(recs):
+                    with cols[i%3]: render_card(r, f"coll_{sel_f}")
+            else: st.info(T("no_rec"))
+
+elif active_nav == "shopping":
+    st.title(T("nav_shop"))
+    if not df_e.empty:
+        local_df = df_e.copy()
+        local_df['id'] = local_df['Zutat'] + "_" + local_df['Einheit']
+        local_df['done'] = local_df['id'].apply(lambda x: x in st.session_state.shop_checked)
+        local_df = local_df.sort_values(by=['done', 'Zutat'])
+        
+        def toggle(item_id):
+            if item_id in st.session_state.shop_checked: st.session_state.shop_checked.remove(item_id)
+            else: st.session_state.shop_checked.add(item_id)
+
+        for _, row in local_df.iterrows():
+            txt = f"{row['Menge']} {row['Einheit']} {row['Zutat']}"
+            st.checkbox(txt, row['done'], key=f"chk_{row['id']}", on_change=toggle, args=(row['id'],))
+        
+        st.divider()
+        c1, c2 = st.columns([1,2])
+        if c1.button(T("clean_shop")):
+             sync_shopping_list_to_db(local_df[~local_df['done']], st.session_state.sh_e)
+             st.session_state.shop_checked = set()
+             refresh_data()
+        if c2.button(T("clear_shop"), type="secondary"):
+             st.session_state.sh_e.clear(); st.session_state.sh_e.append_row(["Zutat", "Menge", "Einheit", "Owner"])
+             refresh_data()
+    else: st.info("Leer.")
+
+elif active_nav == "cook":
+    if not df_z.empty:
+        all_r = sorted(df_z['Rezept'].unique())
+        sel_r = all_r
+        if search_query:
+            filtered = [r for r in all_r if search_query in r.lower()]
+            if filtered: sel_r = filtered
+        
+        idx = 0
+        if "selected_recipe" in st.session_state and st.session_state.selected_recipe in sel_r:
+            idx = sel_r.index(st.session_state.selected_recipe)
+        rezept = st.selectbox(T("nav_cook"), sel_r, index=idx, key="cook_selector", label_visibility="collapsed")
+        
+        if rezept:
+            orig_z = df_z[df_z['Rezept'] == rezept]
+            orig_s = st.session_state.df_s[st.session_state.df_s['Rezept'] == rezept]
+            orig_m = df_m[df_m['Rezept'] == rezept]
+            
+            current_lang = st.session_state.lang_code
+            display_data = {}
+            cache_key = f"{rezept}_{current_lang}"
+            
+            if current_lang != "EN":
+                if "trans_cache" in st.session_state and st.session_state.trans_cache.get("key") == cache_key:
+                    display_data = st.session_state.trans_cache["data"]
+                else:
+                    with st.spinner(T("translating")):
+                        z_list = orig_z[['Zutat', 'Menge', 'Einheit']].to_dict('records')
+                        s_list = orig_s.sort_values('Schritt_Nr')['Anweisung'].tolist()
+                        kategorie = orig_m.iloc[0]['Kategorie'] if not orig_m.empty and 'Kategorie' in orig_m.columns else ""
+                        payload = {"Rezept": rezept, "Kategorie": kategorie, "Zutaten": z_list, "Schritte": s_list}
+                        translated = translate_recipe_text(payload, st.session_state.lang_code)
+                        display_data = translated
+                        st.session_state.trans_cache = {"key": cache_key, "data": translated}
+            else:
+                display_data = {
+                    "Rezept": rezept,
+                    "Kategorie": orig_m.iloc[0]['Kategorie'] if not orig_m.empty and 'Kategorie' in orig_m.columns else "",
+                    "Zutaten": orig_z[['Zutat', 'Menge', 'Einheit']].to_dict('records'),
+                    "Schritte": orig_s.sort_values('Schritt_Nr')['Anweisung'].tolist()
+                }
+
+            bp = float(orig_m['Portionen'].iloc[0]) if not orig_m.empty and orig_m['Portionen'].iloc[0] else 2.0
+            img = PLACEHOLDER_IMG; url = ""
+            if not orig_m.empty:
+                r0 = orig_m.iloc[0]
+                if str(r0['BildURL']).startswith(("http", "data:")): img = r0['BildURL']
+                if str(r0['OriginalURL']).startswith("http"): url = r0['OriginalURL']
+
+            st.markdown(f"""<div style="width: 100%; height: 350px; background-image: url('{img}'); background-size: cover; background-position: center; border-radius: 12px; margin-bottom: 25px;"></div>""", unsafe_allow_html=True)
+            c1, c2 = st.columns([3,1])
+            c1.markdown(f"## {display_data.get('Rezept', rezept)}")
+            if display_data.get('Kategorie'): c1.caption(display_data.get('Kategorie'))
+            
+            is_fav = orig_z['is_fav'].iloc[0] if not orig_z.empty else False
+            if c2.button("★ Favorit" if not is_fav else "☆ Entfernen", use_container_width=True):
+                toggle_favorit(rezept, is_fav, sh_z); refresh_data()
+            
+            with st.popover(T("save_coll_title")):
+                if not df_o.empty:
+                    tf = st.selectbox("Collection", [f for f in df_o['OrdnerName'].unique() if f])
+                    if st.button(T("save_coll_btn")):
+                        add_to_folder_db(tf, rezept, st.session_state.sh_o); st.toast("OK!", icon="✅")
+
+            if url: st.markdown(f"[Original Link]({url})")
+            st.divider()
+            c_p, c_shop = st.columns([1, 2])
+            wp = c_p.number_input(T("portions"), 1, value=int(bp))
+            fak = wp / bp if bp > 0 else 1
+            if c_shop.button(T("add_shop")):
+                tmp = orig_z.copy(); tmp['Menge'] *= fak
+                add_to_shopping_list(tmp, st.session_state.sh_e); refresh_data(); st.toast("OK", icon="✅")
+            
+            t1, t2 = st.tabs([T("ingredients"), T("steps")])
+            with t1:
+                st.write("")
+                for r in display_data.get('Zutaten', []):
+                    m = str(round(r['Menge']*fak, 1)).replace(".0","") if r['Menge']>0 else ""
+                    st.markdown(f"**{m} {r['Einheit']}** {r['Zutat']}")
+            with t2:
+                st.write("")
+                for i, s in enumerate(display_data.get('Schritte', [])): st.markdown(f"**{i+1}.** {s}")
+            st.divider()
+            if st.button(T("nav_edit")):
+                 st.session_state.edit_recipe_name = rezept; st.session_state.internal_nav = "edit"; st.rerun()
+
+elif active_nav == "import":
+    st.title(T("nav_import"))
+    u = st.text_input(T("url_ph"))
+    if st.button(T("import_btn"), type="primary"):
+        with st.spinner("..."):
+            c, th, err = get_web_content(u)
+            if c:
+                d = rezept_analysieren(c, th, u, "TRANSCRIPT" not in c)
+                if isinstance(c, str) and "temp_audio" in c and os.path.exists(c): os.remove(c)
+                if d:
+                    save_recipe_to_db(d, sh_z, st.session_state.sh_s, st.session_state.sh_m, True)
+                    st.success(T("success")); time.sleep(2); refresh_data()
+            else: st.error(err)
+
+elif active_nav == "edit":
+    st.title(T("nav_edit"))
+    all_r = sorted(df_z['Rezept'].unique()) if not df_z.empty else []
+    sel_r = all_r
+    if search_query:
+        filtered = [r for r in all_r if search_query in r.lower()]
+        if filtered: sel_r = filtered
+    
+    pi = 0
+    if "edit_recipe_name" in st.session_state and st.session_state.edit_recipe_name in sel_r:
+        pi = sel_r.index(st.session_state.edit_recipe_name)
+    es = st.selectbox("Rezept", sel_r, index=pi)
+    
+    if es:
+        cz = df_z[df_z['Rezept'] == es][['Zutat', 'Menge', 'Einheit']]
+        cs = st.session_state.df_s[st.session_state.df_s['Rezept'] == es].sort_values('Schritt_Nr')[['Anweisung']]
+        cm = df_m[df_m['Rezept'] == es]
+        
+        if "last_edited_recipe" not in st.session_state or st.session_state.last_edited_recipe != es:
+            st.session_state.last_edited_recipe = es
+            if not cm.empty:
+                for k in ["Kcal", "Protein", "Carbs", "Fett"]: 
+                    st.session_state[f"edit_{k.lower()}"] = int(cm.iloc[0][k])
+        
+        c1, c2 = st.columns(2)
+        nn = c1.text_input("Name", es)
+        
+        c_img = PLACEHOLDER_IMG; c_url = ""; c_cat = "Sonstiges"
+        if not cm.empty:
+            if str(cm.iloc[0]['BildURL']).startswith(("http", "data:")): c_img = cm.iloc[0]['BildURL']
+            c_url = cm.iloc[0]['OriginalURL']
+            if cm.iloc[0]['Kategorie'] in CATEGORIES: c_cat = cm.iloc[0]['Kategorie']
+        
+        n_img = c2.text_input("Bild URL", c_img)
+        n_url = c2.text_input("Original Link", c_url)
+        n_cat = c1.selectbox("Kategorie", CATEGORIES, index=CATEGORIES.index(c_cat) if c_cat in CATEGORIES else 0)
+        
+        st.markdown(f"""<div style="width: 100px; height: 100px; background-image: url('{n_img}'); background-size: cover; border-radius: 8px;"></div>""", unsafe_allow_html=True)
+        bp = st.number_input(T("portions"), value=float(cm['Portionen'].iloc[0]) if not cm.empty else 2.0)
+        
+        st.subheader(T("ingredients"))
+        ez = st.data_editor(cz, num_rows="dynamic", use_container_width=True)
+        st.subheader(T("steps"))
+        es_df = st.data_editor(cs, num_rows="dynamic", use_container_width=True)
+        
+        if st.button(T("calc_macros")):
+            zt = "".join([f"{r['Menge']} {r['Einheit']} {r['Zutat']}\n" for _, r in ez.iterrows()])
+            stt = "\n".join(es_df['Anweisung'].tolist())
+            nm = makros_neu_berechnen(zt, stt, bp)
+            if nm:
+                for k, v in nm.items(): st.session_state[f"edit_{k.lower()}"] = v
+                st.rerun()
+
+        col = st.columns(4)
+        nk = col[0].number_input("Kcal", key="edit_kcal")
+        np = col[1].number_input("Protein", key="edit_protein")
+        nc = col[2].number_input("Carbs", key="edit_carbs")
+        nf = col[3].number_input("Fett", key="edit_fett")
+        
+        st.write("")
+        c_save, c_del = st.columns([2, 1])
+        if c_save.button(T("save"), type="primary", use_container_width=True):
+            jd = {
+                "Rezept": nn, "Portionen": bp, "BildURL": n_img, "OriginalURL": n_url, "Kategorie": n_cat,
+                "Makros": {"Kcal": nk, "Protein": np, "Carbs": nc, "Fett": nf},
+                "Zutaten": ez.to_dict('records'), "Schritte": es_df['Anweisung'].tolist()
+            }
+            if nn != es: delete_recipe_from_db(es, sh_z, st.session_state.sh_s, st.session_state.sh_m)
+            save_recipe_to_db(jd, sh_z, st.session_state.sh_s, st.session_state.sh_m, True)
+            st.success(T("success")); time.sleep(2); refresh_data()
+        
+        if c_del.button(T("delete"), use_container_width=True):
+            delete_recipe_from_db(es, sh_z, st.session_state.sh_s, st.session_state.sh_m)
+            refresh_data()
