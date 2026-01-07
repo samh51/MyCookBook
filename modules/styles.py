@@ -9,9 +9,8 @@ def apply_custom_css():
         /* --- GLOBAL VARIABLES --- */
         :root {
             --bg-color: #ffffff;
-            --sidebar-bg: #f5f5f7; /* Apple Light Gray */
-            --text-color: #1d1d1f; /* Fast Schwarz */
-            --accent-color: #000000;
+            --sidebar-bg: #f5f5f7;
+            --text-color: #1d1d1f;
             --border-color: #e5e5e5;
         }
 
@@ -21,112 +20,44 @@ def apply_custom_css():
             background-color: var(--bg-color);
         }
         
-        h1, h2, h3 {
-            font-family: 'Inter', sans-serif;
-            font-weight: 600;
-            letter-spacing: -0.5px; /* Modernes Tight-Tracking */
-            color: #000000;
-        }
-
         /* --- SIDEBAR --- */
         [data-testid="stSidebar"] {
             background-color: var(--sidebar-bg);
-            border-right: 1px solid transparent;
         }
 
-        /* Verstecke Standard Radio Buttons */
-        .stRadio > label { display: none !important; }
-        div[role="radiogroup"] > label > div:first-child { display: none; }
-        
-        div[role="radiogroup"] {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding: 10px 0;
-        }
-        
-        /* MENU ITEMS (Minimalistisch) */
-        div[role="radiogroup"] label {
-            display: flex;
-            align-items: center;
-            width: 100%;
-            height: 45px;
-            background-color: transparent; /* Kein Hintergrund normal */
-            border-radius: 8px;
-            border: none;
-            margin: 0 !important;
-            padding-left: 15px !important;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            color: #666;
-        }
-        
-        div[role="radiogroup"] label p {
-            font-family: 'Inter', sans-serif;
-            font-size: 15px;
-            font-weight: 500;
-            margin: 0;
-        }
-        
-        /* HOVER */
-        div[role="radiogroup"] label:hover {
-            background-color: rgba(0,0,0,0.05);
-            color: #000;
-        }
-        
-        /* ACTIVE STATE (Schwarz markiert) */
-        div[role="radiogroup"] label[data-checked="true"] {
-            background-color: #000000 !important;
-            color: #ffffff !important;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        div[role="radiogroup"] label[data-checked="true"] p {
-            color: #ffffff !important;
-        }
-
-        /* --- CARDS (Clean & Flat) --- */
+        /* --- CARDS (Desktop Standard) --- */
         div[data-testid="stVerticalBlockBorderWrapper"] {
             background-color: #ffffff;
             border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 0; /* Bild geht bis an den Rand */
+            border-radius: 8px; /* Etwas eckiger für Modern Look */
+            padding: 0;
             overflow: hidden;
-            transition: all 0.3s ease;
-            min-height: 380px;
+            transition: all 0.2s ease;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            box-shadow: none;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
         
-        div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            border-color: transparent;
-        }
-        
-        /* Inneres Padding für Text in der Karte */
-        div[data-testid="stVerticalBlockBorderWrapper"] > div:nth-child(2) {
-            padding: 15px;
-        }
-
         /* BILD */
         .recipe-card-img {
             width: 100%;
-            padding-top: 100%; /* Quadratisch */
+            padding-top: 75%; /* 4:3 Format statt Quadratisch (Platz sparen) */
             background-size: cover;
             background-position: center;
             border-bottom: 1px solid var(--border-color);
         }
 
-        /* TYPO IN KARTE */
+        /* TEXT BODY */
+        div[data-testid="stVerticalBlockBorderWrapper"] > div:nth-child(2) {
+            padding: 10px;
+        }
+
         .recipe-title {
-            font-family: 'Inter', sans-serif;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1rem;
             color: #000;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
             display: block;
             white-space: nowrap; 
             overflow: hidden; 
@@ -134,56 +65,81 @@ def apply_custom_css():
         }
         
         .recipe-cat {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #888;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 500;
+            display: block;
+            margin-bottom: 8px;
         }
 
-        /* --- BUTTONS (Schwarz/Weiß) --- */
+        /* BUTTONS */
         div.stButton > button {
-            background-color: #000000;
-            color: #ffffff;
-            border-radius: 8px;
+            border-radius: 6px;
             font-weight: 500;
-            font-size: 14px;
-            padding: 10px 20px;
-            border: 1px solid transparent;
-            transition: all 0.2s;
-        }
-        
-        div.stButton > button:hover {
-            background-color: #333333;
-            color: #ffffff;
-            border-color: transparent;
-            transform: scale(1.02);
-        }
-        
-        /* Sekundäre Buttons (z.B. Favorit entfernen) */
-        button[kind="secondary"] {
-            background-color: #f5f5f7 !important;
-            color: #000 !important;
-            border: 1px solid #e5e5e5 !important;
+            border: 1px solid #eee;
+            width: 100%;
         }
 
-        /* INPUT FIELDS */
-        .stTextInput > div > div > input {
-            background-color: #f5f5f7;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 12px;
-            color: #000;
-        }
-        .stTextInput > div > div > input:focus {
-            background-color: #fff;
-            box-shadow: 0 0 0 2px #000; /* Schwarzer Focus Ring */
-        }
-        
-        /* Metric Styling */
-        div[data-testid="stMetricValue"] {
-            color: #000 !important;
-            font-weight: 600;
+        /* --- MOBILE OPTIMIERUNG (Das ist der wichtige Teil!) --- */
+        @media (max-width: 768px) {
+            
+            /* Zwingt Streamlit Spalten nebeneinander zu bleiben */
+            [data-testid="column"] {
+                width: 33.33% !important;
+                flex: 1 1 33.33% !important;
+                min-width: 0px !important; /* Das verhindert das Umbrechen! */
+                padding: 0 2px !important; /* Ganz enge Abstände */
+            }
+            
+            /* Karten kompakter machen */
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                border-radius: 6px;
+                min-height: 160px; /* Kleiner */
+            }
+            
+            /* Bild flacher machen */
+            .recipe-card-img {
+                padding-top: 60% !important; 
+            }
+            
+            /* Innenabstand reduzieren */
+            div[data-testid="stVerticalBlockBorderWrapper"] > div:nth-child(2) {
+                padding: 6px !important;
+            }
+
+            /* Schriftarten verkleinern */
+            .recipe-title {
+                font-size: 11px !important;
+                margin-bottom: 0px !important;
+            }
+            
+            .recipe-cat {
+                font-size: 8px !important;
+                margin-bottom: 4px !important;
+            }
+            
+            /* Buttons winzig machen */
+            div.stButton > button {
+                font-size: 9px !important;
+                padding: 2px 4px !important;
+                min-height: 0px !important;
+                height: 24px !important;
+                line-height: 1 !important;
+            }
+            
+            /* Abstände zwischen den Buttons */
+            div[data-testid="column"] > div > div > div {
+                gap: 2px !important;
+            }
+            
+            /* Toast Nachrichten oben fixieren, damit sie nicht stören */
+            .stToast {
+                top: 10px;
+                right: 10px;
+                width: 80%;
+            }
         }
         </style>
     """, unsafe_allow_html=True)
