@@ -1,195 +1,179 @@
-import os
-import time
-import json
-import google.generativeai as genai
-from youtube_transcript_api import YouTubeTranscriptApi
-import yt_dlp
 import streamlit as st
+import pandas as pd
 import random
-from .utils import PLACEHOLDER_IMG
+import time
+import os
 
-# --- KONFIGURATION ---
-try:
-    GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
-except:
-    GEMINI_API_KEY = "AIzaSyD5YahUeVmJgAI7cEfxplcD_Re16L8HMIM" 
+# --- COOKIE WORKAROUND FÜR CLOUD ---
+if "cookies" in st.secrets:
+    with open("cookies.txt", "w") as f:
+        f.write(st.secrets["cookies"])
 
-CATEGORIES = ["Fleisch", "Fisch", "Hühnchen", "Vegetarisch", "Vegan", "Pasta", "Reis", "Dessert", "Vorspeise", "Frühstück", "Sonstiges"]
+# Module
+from modules.database import (
+    get_data, save_recipe_to_db, delete_recipe_from_db, toggle_favorit, 
+    add_to_folder_db, add_to_shopping_list, sync_shopping_list_to_db
+)
+from modules.api import (
+    rezept_analysieren, makros_neu_berechnen, translate_recipe_text, get_web_content, CATEGORIES
+)
+from modules.utils import PLACEHOLDER_IMG
+from modules.styles import apply_custom_css
+from modules.auth import login_form, change_user_password, update_user_language
 
-# --- HELFER FUNKTIONEN ---
+# --- SETUP ---
+st.set_page_config(page_title="My Cookbook", page_icon="🌿", layout="wide")
+apply_custom_css()
 
-def clean_json_response(text):
-    text = text.strip()
-    if "```json" in text:
-        text = text.split("```json")[1].split("```")[0]
-    elif "```" in text:
-        text = text.split("```")[1].split("```")[0]
-    return text.strip()
+# --- DATENBANK INIT ---
+if "sh_u" not in st.session_state:
+    data = get_data(None)
+    st.session_state.sh_u = data[12] # User Sheet
 
-def get_video_id_youtube(url):
-    try:
-        if "youtube.com/shorts/" in url: return url.split("shorts/")[1].split("?")[0]
-        elif "youtube.com/watch?v=" in url: return url.split("v=")[1].split("&")[0]
-        elif "youtu.be/" in url: return url.split("youtu.be/")[1].split("?")[0]
-    except: return None
-    return None
+# --- LOGIN CHECK ---
+if not login_form(st.session_state.sh_u):
+    st.stop()
 
-def get_web_content(url):
-    thumbnail_url = None
-    content_path = None
-    error_msg = None
-    
-    # Pfad zur Cookie-Datei (wird in app.py aus Secrets erstellt)
-    cookie_file = "cookies.txt"
-    has_cookies = os.path.exists(cookie_file)
-    
-    # --- STEALTH OPTIONEN ---
-    # Wir tun so, als wären wir ein normaler Browser
-    ydl_opts_base = {
-        'quiet': True, 
-        'noplaylist': True,
-        'no_warnings': True,
-        'ignoreerrors': True, # Wichtig: Nicht abstürzen bei 403
-        'nocheckcertificate': True,
-        # Fake User Agent (iPhone)
-        'user_agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
-        'http_headers': {
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': 'https://www.google.com/'
-        }
+# --- USER EMAIL HOLEN ---
+user_email = st.session_state.user_email
+
+# --- DATEN FÜR USER LADEN ---
+if "df_z" not in st.session_state or st.session_state.df_z is None:
+    st.session_state.df_z, st.session_state.df_s, st.session_state.df_m, \
+    st.session_state.df_e, st.session_state.df_o, st.session_state.basics, \
+    st.session_state.sh_z, st.session_state.sh_s, st.session_state.sh_b, \
+    st.session_state.sh_m, st.session_state.sh_e, st.session_state.sh_o, _ = get_data(user_email)
+
+# --- HELPER: REFRESH DATA ---
+def refresh_data():
+    keys = ['df_z', 'df_s', 'df_m', 'df_e', 'df_o']
+    for k in keys:
+        if k in st.session_state: del st.session_state[k]
+    st.rerun()
+
+# --- SPRACHEN & ÜBERSETZUNG ---
+LANGUAGES = {
+    "English": "EN", "Deutsch": "DE", "Español": "ES",
+    "Français": "FR", "Italiano": "IT", "Polski": "PL"
+}
+CODE_TO_NAME = {v: k for k, v in LANGUAGES.items()}
+
+TRANSLATIONS = {
+    "EN": {
+        "nav_dash": "⌂ Dashboard", "nav_coll": "◫ Collections", "nav_shop": "≡ Shopping List", 
+        "nav_cook": "♨ Cook", "nav_import": "⬇ Import", "nav_edit": "⚙ Editor", "nav_profile": "👤 Profile",
+        "search_ph": "Search...", "welcome": "Welcome back", "favs": "Your Favorites", "all_rec": "Recipe Book",
+        "no_rec": "No recipes found.", "random": "Inspiration", "random_btn": "Surprise Me",
+        "to_rec": "Open Recipe", "ingredients": "Ingredients", "steps": "Instructions",
+        "save": "Save", "delete": "Delete", "calc_macros": "AI Calc Macros",
+        "portions": "Servings", "import_btn": "Analyze & Save",
+        "url_ph": "Link to YouTube / Instagram / TikTok", "folder_new": "New Collection",
+        "add_shop": "Add to List", "clean_shop": "Clean List", "clear_shop": "Delete All",
+        "save_coll_title": "Save to Collection", "save_coll_btn": "Add",
+        "translating": "Translating recipe...", "logout": "Logout", "success": "Success!",
+        "dash_intro": "Your digital kitchen assistant. Here is what you can do:",
+        "feat_1_t": "AI Import", "feat_1_d": "Paste any video link (Insta/TikTok/YouTube). The AI extracts ingredients, steps, and nutrition automatically.",
+        "feat_2_t": "Nutrition", "feat_2_d": "Every recipe gets detailed macro-nutrients (Calories, Protein, Carbs, Fat) calculated per serving.",
+        "feat_3_t": "Shopping", "feat_3_d": "Adjust servings and add ingredients directly to your interactive shopping list.",
+        "feat_4_t": "Organize", "feat_4_d": "Create custom collections and mark your favorites to find them quickly.",
+        "prof_set": "Settings", "prof_lang": "Language", "prof_pw": "Change Password",
+        "pw_old": "Old Password", "pw_new": "New Password", "pw_upd": "Update Password", "pw_success": "Password updated!"
+    },
+    "DE": {
+        "nav_dash": "⌂ Dashboard", "nav_coll": "◫ Sammlungen", "nav_shop": "≡ Einkaufsliste", 
+        "nav_cook": "♨ Kochen", "nav_import": "⬇ Import", "nav_edit": "⚙ Editor", "nav_profile": "👤 Profil",
+        "search_ph": "Suche...", "welcome": "Willkommen zurück", "favs": "Deine Favoriten", "all_rec": "Rezeptbuch",
+        "no_rec": "Keine Rezepte gefunden.", "random": "Inspiration", "random_btn": "Überrasch mich",
+        "to_rec": "Zum Rezept", "ingredients": "Zutaten", "steps": "Zubereitung",
+        "save": "Speichern", "delete": "Löschen", "calc_macros": "KI Makros berechnen",
+        "portions": "Portionen", "import_btn": "Analysieren & Speichern",
+        "url_ph": "Link zu YouTube / Instagram / TikTok", "folder_new": "Neue Sammlung",
+        "add_shop": "Auf Einkaufsliste", "clean_shop": "Liste bereinigen", "clear_shop": "Alles löschen",
+        "save_coll_title": "In Sammlung speichern", "save_coll_btn": "Hinzufügen",
+        "translating": "Übersetze Rezept...", "logout": "Abmelden", "success": "Erfolgreich!",
+        "dash_intro": "Dein digitaler Küchen-Assistent. Das kannst du machen:",
+        "feat_1_t": "KI Import", "feat_1_d": "Kopiere einen Link (Insta/TikTok/YouTube). Die KI extrahiert Zutaten, Schritte & Nährwerte automatisch.",
+        "feat_2_t": "Nährwerte", "feat_2_d": "Jedes Rezept erhält automatisch berechnete Makros (Kcal, Protein, Carbs, Fett) pro Portion.",
+        "feat_3_t": "Einkauf", "feat_3_d": "Passe die Portionen an und setze Zutaten direkt auf deine interaktive Einkaufsliste.",
+        "feat_4_t": "Ordnung", "feat_4_d": "Erstelle eigene Sammlungen und markiere Favoriten für schnellen Zugriff.",
+        "prof_set": "Einstellungen", "prof_lang": "Sprache", "prof_pw": "Passwort ändern",
+        "pw_old": "Altes Passwort", "pw_new": "Neues Passwort", "pw_upd": "Passwort aktualisieren", "pw_success": "Passwort geändert!"
+    },
+    "ES": {
+        "nav_dash": "⌂ Tablero", "nav_coll": "◫ Colecciones", "nav_shop": "≡ Lista de Compras", 
+        "nav_cook": "♨ Cocinar", "nav_import": "⬇ Importar", "nav_edit": "⚙ Editor", "nav_profile": "👤 Perfil",
+        "search_ph": "Buscar...", "welcome": "Bienvenido", "favs": "Favoritos", "all_rec": "Recetario",
+        "no_rec": "No se encontraron recetas.", "random": "Inspiración", "random_btn": "Sorpréndeme",
+        "to_rec": "Ver Receta", "ingredients": "Ingredientes", "steps": "Instrucciones",
+        "save": "Guardar", "delete": "Borrar", "calc_macros": "Calc Macros IA",
+        "portions": "Porciones", "import_btn": "Analizar y Guardar",
+        "url_ph": "Enlace a YouTube / Instagram / TikTok", "folder_new": "Nueva Colección",
+        "add_shop": "Añadir a lista", "clean_shop": "Limpiar lista", "clear_shop": "Borrar todo",
+        "save_coll_title": "Guardar en colección", "save_coll_btn": "Añadir",
+        "translating": "Traduciendo...", "logout": "Cerrar Sesión", "success": "¡Éxito!",
+        "dash_intro": "Tu asistente de cocina digital. Esto es lo que puedes hacer:",
+        "feat_1_t": "Importar IA", "feat_1_d": "Pega un enlace. La IA extrae ingredientes, pasos y nutrición automáticamente.",
+        "feat_2_t": "Nutrición", "feat_2_d": "Cálculo automático de macros (Calorías, Proteínas, Grasas) por porción.",
+        "feat_3_t": "Compras", "feat_3_d": "Ajusta las porciones y añade ingredientes a tu lista de compras.",
+        "feat_4_t": "Organizar", "feat_4_d": "Crea colecciones personalizadas y marca tus favoritos.",
+        "prof_set": "Ajustes", "prof_lang": "Idioma", "prof_pw": "Cambiar Contraseña",
+        "pw_old": "Contraseña anterior", "pw_new": "Nueva contraseña", "pw_upd": "Actualizar", "pw_success": "¡Actualizado!"
     }
+}
+for l in ["FR", "IT", "PL"]: TRANSLATIONS[l] = TRANSLATIONS["EN"]
+
+if "lang_code" not in st.session_state: st.session_state.lang_code = "EN"
+def T(key): return TRANSLATIONS[st.session_state.lang_code].get(key, TRANSLATIONS["EN"].get(key, key))
+
+MENU_MAP = {
+    "dashboard": "nav_dash", "collections": "nav_coll", "shopping": "nav_shop",
+    "cook": "nav_cook", "import": "nav_import", "edit": "nav_edit", "profile": "nav_profile"
+}
+
+# Alias
+df_z = st.session_state.df_z; df_m = st.session_state.df_m
+sh_z = st.session_state.sh_z; sh_s = st.session_state.sh_s; sh_m = st.session_state.sh_m; sh_e = st.session_state.sh_e; sh_o = st.session_state.sh_o
+
+# --- CALLBACKS ---
+def go_to_recipe_callback(r_name):
+    st.session_state.selected_recipe = r_name
+    st.session_state.internal_nav = "cook"
+    if "trans_cache" in st.session_state: del st.session_state.trans_cache
+
+def fav_callback(r_name, is_currently_fav):
+    toggle_favorit(r_name, is_currently_fav, sh_z)
+    refresh_data()
+
+# --- SIDEBAR ---
+with st.sidebar:
+    st.markdown("### My Cookbook")
+    search_query = st.text_input("", placeholder=T("search_ph")).lower().strip()
+    st.write("") 
     
-    if has_cookies: 
-        ydl_opts_base['cookiefile'] = cookie_file
-
-    # 1. Metadaten holen
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts_base) as ydl:
-            info = ydl.extract_info(url, download=False)
-            if info:
-                thumbnail_url = info.get('thumbnail')
-                # Manchmal ist der Titel nützlich als Fallback-Text
-                video_title = info.get('title', '')
-                video_desc = info.get('description', '')
-    except Exception as e:
-        print(f"Metadaten Warnung: {e}")
-        thumbnail_url = PLACEHOLDER_IMG
-
-    # 2. YouTube Transkript
-    yt_id = get_video_id_youtube(url)
-    if yt_id:
-        try:
-            transcript = YouTubeTranscriptApi.get_transcript(yt_id, languages=['en', 'de', 'es', 'fr', 'it', 'pl'])
-            text = " ".join([t['text'] for t in transcript])
-            return f"TRANSCRIPT: {text}", thumbnail_url, None
-        except: pass
-
-    # 3. Audio Download (Der kritische Teil)
-    try:
-        temp_filename = f"temp_audio_{int(time.time())}.m4a"
-        
-        ydl_opts_download = ydl_opts_base.copy()
-        ydl_opts_download.update({
-            'format': 'bestaudio/best',
-            'outtmpl': temp_filename,
-            'postprocessors': [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'm4a'}],
-        })
-        
-        with yt_dlp.YoutubeDL(ydl_opts_download) as ydl:
-            # Versuch 1: Normaler Download
-            try:
-                ydl.extract_info(url, download=True)
-            except Exception as e:
-                # Versuch 2: Falls 403, versuchen wir es ohne spezielle Header
-                # Manchmal blockiert Instagram gerade WEIL wir Header faken
-                if "403" in str(e):
-                    print("403 erkannt, versuche Fallback...")
-                    ydl.params['user_agent'] = None # Standard Agent nutzen
-                    ydl.extract_info(url, download=True)
-                else:
-                    raise e
-            
-            if os.path.exists(temp_filename) and os.path.getsize(temp_filename) > 0:
-                content_path = temp_filename
-            else:
-                # FALLBACK: Wenn Download fehlschlägt, geben wir Titel/Beschreibung an die KI
-                # Das reicht oft schon für ein Rezept!
-                if 'video_title' in locals() and video_title:
-                    return f"Rezept aus Metadaten (Download blockiert): {video_title}. \nBeschreibung: {video_desc}", thumbnail_url, None
-                else:
-                    error_msg = "Download blockiert (403). Cookies prüfen."
-                
-    except Exception as e:
-        # Letzter Rettungsanker: Metadaten
-        if 'video_title' in locals() and video_title:
-             return f"Rezept aus Metadaten (Notfall): {video_title}. {video_desc}", thumbnail_url, None
-        error_msg = f"Fehler: {str(e)[:50]}... (Cookies erneuern?)"
-
-    return content_path, thumbnail_url, error_msg
-
-# --- KI FUNKTIONEN (Bleiben gleich) ---
-
-def rezept_analysieren(content, img_url, original_url, is_file=False):
-    if not GEMINI_API_KEY: st.error("⚠️ API Key fehlt!"); return None
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-flash-latest') 
+    if "internal_nav" not in st.session_state: st.session_state.internal_nav = "dashboard"
+    options_display = [T(v) for k, v in MENU_MAP.items()]
+    options_internal = list(MENU_MAP.keys())
+    current_idx = options_internal.index(st.session_state.internal_nav) if st.session_state.internal_nav in options_internal else 0
+    selected_display = st.radio("Menu", options_display, index=current_idx, label_visibility="collapsed")
+    st.session_state.internal_nav = options_internal[options_display.index(selected_display)]
     
-    prompt = f"""
-    Du bist ein Profi-Koch. Analysiere das Rezept.
-    Input kann Text (Transkript/Metadaten) oder Audio sein.
-    
-    WICHTIG: 
-    1. Schätze Portionen (Default: 2) und Makros PRO PORTION.
-    2. Ordne es EINER Kategorie zu: {", ".join(CATEGORIES)}.
-    3. Wenn der Input wenig Infos enthält (z.B. nur Titel), erfinde ein passendes, leckeres Rezept basierend darauf.
-    
-    Antworte NUR mit reinem JSON:
-    {{
-      "Rezept": "Name", "Portionen": Zahl, "Kategorie": "Name",
-      "Makros": {{"Kcal": Zahl, "Protein": Zahl, "Carbs": Zahl, "Fett": Zahl}},
-      "Zutaten": [{{"Zutat": "Name", "Menge": Zahl, "Einheit": "g/ml/Stk"}}],
-      "Schritte": ["Schritt 1", "Schritt 2"]
-    }}
-    """
-    try:
-        if is_file and os.path.exists(content):
-            myfile = genai.upload_file(content)
-            while myfile.state.name == "PROCESSING": time.sleep(1); myfile = genai.get_file(myfile.name)
-            response = model.generate_content([prompt, myfile])
-        else:
-            response = model.generate_content(f"{prompt}\n\nInput:\n{content}")
-        
-        json_text = clean_json_response(response.text)
-        data = json.loads(json_text)
-        
-        data["BildURL"] = img_url if img_url else PLACEHOLDER_IMG
-        data["OriginalURL"] = original_url if original_url else ""
-        if "Kategorie" not in data or data["Kategorie"] not in CATEGORIES: data["Kategorie"] = "Sonstiges"
-        return data
-    except Exception as e: st.error(f"KI Fehler: {e}"); return None
+    st.divider()
+    if st.button("⟳ Refresh"): refresh_data()
 
-def makros_neu_berechnen(zutaten_text, schritte_text, portionen):
-    if not GEMINI_API_KEY: return None
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-flash-latest')
-    prompt = f"Berechne Nährwerte PRO PORTION (Gesamt {portionen} P.).\nZutaten:\n{zutaten_text}\nZubereitung:\n{schritte_text}\nAntworte NUR mit JSON: {{\"Kcal\": int, \"Protein\": int, \"Carbs\": int, \"Fett\": int}}"
-    try:
-        response = model.generate_content(prompt)
-        json_text = clean_json_response(response.text)
-        return json.loads(json_text)
-    except Exception as e: st.error(f"KI Fehler: {e}"); return None
+# --- SHARED CARD FUNCTION ---
+def render_card(r_name, context="all"):
+    img = PLACEHOLDER_IMG; cat = ""
+    if not df_m.empty:
+        entry = df_m[df_m['Rezept'] == r_name]
+        if not entry.empty: 
+            val = str(entry.iloc[0]['BildURL']).strip()
+            if val.startswith(("http", "data:")): img = val
+            if 'Kategorie' in entry.columns: cat = entry.iloc[0]['Kategorie']
+    is_fav = False
+    if not df_z.empty:
+        z_rows = df_z[df_z['Rezept'] == r_name]
+        if not z_rows.empty: is_fav = z_rows.iloc[0]['is_fav']
 
-def translate_recipe_text(data, target_lang):
-    if not GEMINI_API_KEY: return data
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-flash-latest')
-    prompt = f"""
-    Translate values to {target_lang}. Keep JSON structure.
-    Keys to translate: "Rezept", "Zutat", "Einheit", "Kategorie", "Schritte".
-    JSON: {json.dumps(data)}
-    """
-    try:
-        response = model.generate_content(prompt)
-        json_text = clean_json_response(response.text)
-        return json.loads(json_text)
-    except: return data
+    with st.container(border=True):
+        st.markdown(f"""<div class="recipe-card-img" style="background-image: url('{img}');"></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style="padding: 10px 10px
