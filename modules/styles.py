@@ -3,142 +3,179 @@ import streamlit as st
 def apply_custom_css():
     st.markdown("""
         <style>
-        /* --- FONT: INTER (Wie Apple/Modern UI) --- */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        /* --- FONT: INTER & GLOBAL --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
         
-        /* --- GLOBAL VARIABLES --- */
         :root {
             --bg-color: #ffffff;
-            --sidebar-bg: #f5f5f7;
-            --text-color: #1d1d1f;
-            --border-color: #e5e5e5;
+            --card-bg: #ffffff;
+            --text-color: #111111;
+            --sub-text: #666666;
+            --accent-color: #000000;
+            --nav-hover: #f0f2f6;
         }
 
         html, body, [class*="css"] {
             font-family: 'Inter', sans-serif;
             color: var(--text-color);
-            background-color: var(--bg-color);
-        }
-        
-        /* --- SIDEBAR --- */
-        [data-testid="stSidebar"] {
-            background-color: var(--sidebar-bg);
         }
 
-        /* --- CARDS (Desktop Standard) --- */
-        div[data-testid="stVerticalBlockBorderWrapper"] {
-            background-color: #ffffff;
-            border: 1px solid var(--border-color);
-            border-radius: 8px; /* Etwas eckiger für Modern Look */
-            padding: 0;
-            overflow: hidden;
-            transition: all 0.2s ease;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        /* --- SIDEBAR MENU (Modern Button Look) --- */
+        [data-testid="stSidebar"] {
+            background-color: #f9f9f9;
+            padding-top: 20px;
         }
         
-        /* BILD */
+        /* Radio Buttons verstecken und Styling ändern */
+        .stRadio > div {
+            gap: 10px;
+        }
+        
+        /* Das Label des Radio Buttons (der Text) */
+        .stRadio label {
+            background-color: white;
+            padding: 12px 16px !important;
+            border-radius: 12px;
+            border: 1px solid #e5e5e5;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        
+        /* Verstecke den eigentlichen Radio-Kreis */
+        .stRadio div[role="radiogroup"] > label > div:first-child {
+            display: none;
+        }
+        
+        /* Text im Button */
+        .stRadio label p {
+            font-size: 16px !important; /* Größer wie gewünscht */
+            font-weight: 500;
+            margin: 0;
+            color: #333;
+        }
+
+        /* Hover Effekt */
+        .stRadio label:hover {
+            border-color: #ccc;
+            background-color: #fafafa;
+        }
+
+        /* AKTIVER STATUS (Ausgewählt) */
+        .stRadio label[data-checked="true"] {
+            background-color: #000000 !important;
+            border-color: #000000 !important;
+            color: white !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        
+        .stRadio label[data-checked="true"] p {
+            color: #ffffff !important;
+        }
+
+        /* --- REZEPT KARTEN --- */
+        div[data-testid="stVerticalBlockBorderWrapper"] {
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-radius: 16px; /* Rundere Ecken */
+            overflow: hidden;
+            background: white;
+            transition: transform 0.2s;
+            margin-bottom: 10px;
+        }
+        
+        /* BILD HOCHFORMAT (Portrait) */
         .recipe-card-img {
             width: 100%;
-            padding-top: 75%; /* 4:3 Format statt Quadratisch (Platz sparen) */
+            padding-top: 150%; /* 1:1.5 Verhältnis (Hochformat) */
             background-size: cover;
             background-position: center;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid #f0f0f0;
         }
 
         /* TEXT BODY */
-        div[data-testid="stVerticalBlockBorderWrapper"] > div:nth-child(2) {
-            padding: 10px;
+        .card-content {
+            padding: 12px;
         }
 
         .recipe-title {
-            font-weight: 600;
-            font-size: 1rem;
+            font-weight: 700;
+            font-size: 16px; /* +3px größer */
             color: #000;
-            margin-bottom: 2px;
-            display: block;
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis;
+            line-height: 1.3;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2; /* Max 2 Zeilen */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
         
         .recipe-cat {
-            font-size: 0.75rem;
+            font-size: 12px; /* Auch größer */
             color: #888;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            font-weight: 500;
+            font-weight: 600;
+            margin-bottom: 12px;
             display: block;
-            margin-bottom: 8px;
         }
 
-        /* BUTTONS */
+        /* BUTTONS IN KARTE */
         div.stButton > button {
-            border-radius: 6px;
-            font-weight: 500;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 0.5rem 1rem;
             border: 1px solid #eee;
+            background-color: #f7f7f7;
+            color: #333;
             width: 100%;
+            transition: all 0.2s;
+        }
+        div.stButton > button:hover {
+            background-color: #e0e0e0;
+            border-color: #ccc;
+        }
+        /* Favoriten Stern Button transparent */
+        div.stButton > button:focus:not(:active) {
+            border-color: #000;
+            color: #000;
         }
 
-        /* --- MOBILE OPTIMIERUNG (Das ist der wichtige Teil!) --- */
+        /* --- MOBILE LAYOUT OPTIMIERUNG (< 768px) --- */
         @media (max-width: 768px) {
             
-            /* Zwingt Streamlit Spalten nebeneinander zu bleiben */
+            /* Zwingt Spalten nebeneinander (2 Spalten Layout) */
             [data-testid="column"] {
-                width: 33.33% !important;
-                flex: 1 1 33.33% !important;
-                min-width: 0px !important; /* Das verhindert das Umbrechen! */
-                padding: 0 2px !important; /* Ganz enge Abstände */
+                width: 50% !important;
+                flex: 1 1 50% !important;
+                min-width: 50% !important;
+                padding: 0 6px !important; /* Abstand zwischen Spalten */
             }
             
-            /* Karten kompakter machen */
-            div[data-testid="stVerticalBlockBorderWrapper"] {
-                border-radius: 6px;
-                min-height: 160px; /* Kleiner */
-            }
-            
-            /* Bild flacher machen */
-            .recipe-card-img {
-                padding-top: 60% !important; 
-            }
-            
-            /* Innenabstand reduzieren */
-            div[data-testid="stVerticalBlockBorderWrapper"] > div:nth-child(2) {
-                padding: 6px !important;
-            }
-
-            /* Schriftarten verkleinern */
+            /* Text Anpassung Mobile */
             .recipe-title {
-                font-size: 11px !important;
-                margin-bottom: 0px !important;
+                font-size: 15px !important; /* Gut lesbar */
             }
-            
             .recipe-cat {
-                font-size: 8px !important;
-                margin-bottom: 4px !important;
+                font-size: 11px !important;
             }
             
-            /* Buttons winzig machen */
+            /* Buttons kompakter auf Mobile */
             div.stButton > button {
-                font-size: 9px !important;
-                padding: 2px 4px !important;
-                min-height: 0px !important;
-                height: 24px !important;
-                line-height: 1 !important;
+                font-size: 13px !important;
+                padding: 6px 4px !important;
             }
             
-            /* Abstände zwischen den Buttons */
-            div[data-testid="column"] > div > div > div {
-                gap: 2px !important;
-            }
-            
-            /* Toast Nachrichten oben fixieren, damit sie nicht stören */
-            .stToast {
-                top: 10px;
-                right: 10px;
-                width: 80%;
+            /* Container Abstände */
+            .block-container {
+                padding-top: 2rem !important;
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
             }
         }
         </style>
